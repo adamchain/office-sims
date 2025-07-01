@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
-import { X, FileText, File, Upload } from 'lucide-react-native';
+import { X, FileText, File, Upload, FolderOpen } from 'lucide-react-native';
 import FileImportButton from './FileImportButton';
 import FileViewer from './FileViewer';
 import type { FileData } from './DeskScene';
@@ -12,11 +12,19 @@ interface FileModalProps {
   onClose: () => void;
   onFileImported?: (file: FileData) => void;
   allowImport?: boolean;
+  drawerIndex?: number;
 }
 
-export default function FileModal({ visible, title, files, onClose, onFileImported, allowImport = false }: FileModalProps) {
+export default function FileModal({ 
+  visible, 
+  title, 
+  files, 
+  onClose, 
+  onFileImported, 
+  allowImport = false,
+  drawerIndex 
+}: FileModalProps) {
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
-  const [selectedFileUri, setSelectedFileUri] = useState<string>('');
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
@@ -32,11 +40,7 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
   };
 
   const handleFilePress = (file: FileData) => {
-    // For now, we'll create a mock URI since we don't have the actual file URIs stored
-    // In a real implementation, you'd store and retrieve the actual file URIs
-    const mockUri = `file://mock/${file.name}`;
     setSelectedFile(file);
-    setSelectedFileUri(mockUri);
   };
 
   const handleFileImported = (file: FileData) => {
@@ -45,19 +49,45 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
     }
   };
 
+  const handleClose = () => {
+    setSelectedFile(null);
+    onClose();
+  };
+
+  const handleFileViewerClose = () => {
+    setSelectedFile(null);
+  };
+
+  const getDrawerColor = (index?: number) => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+    return index !== undefined ? colors[index] : '#8B4513';
+  };
+
+  const getDrawerLabel = (index?: number) => {
+    const labels = ['A', 'B', 'C', 'D', 'E'];
+    return index !== undefined ? labels[index] : '';
+  };
+
   return (
     <>
       <Modal
         visible={visible}
         animationType="slide"
         transparent
-        onRequestClose={onClose}
+        onRequestClose={handleClose}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{title}</Text>
-              <TouchableOpacity onPress={onClose}>
+              <View style={styles.titleContainer}>
+                {drawerIndex !== undefined && (
+                  <View style={[styles.drawerIndicator, { backgroundColor: getDrawerColor(drawerIndex) }]}>
+                    <Text style={styles.drawerIndicatorText}>{getDrawerLabel(drawerIndex)}</Text>
+                  </View>
+                )}
+                <Text style={styles.modalTitle}>{title}</Text>
+              </View>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                 <X size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -71,21 +101,30 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
               </View>
             )}
 
-            <ScrollView style={styles.fileList}>
+            <ScrollView style={styles.fileList} showsVerticalScrollIndicator={false}>
               {files.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Upload size={48} color="#CCC" />
-                  <Text style={styles.emptyText}>No files yet</Text>
+                  {drawerIndex !== undefined ? (
+                    <FolderOpen size={48} color="#CCC" />
+                  ) : (
+                    <Upload size={48} color="#CCC" />
+                  )}
+                  <Text style={styles.emptyText}>
+                    {drawerIndex !== undefined ? `Drawer ${getDrawerLabel(drawerIndex)} is empty` : 'No files yet'}
+                  </Text>
                   {allowImport && (
                     <Text style={styles.emptySubtext}>
-                      Import your first file to get started
+                      {drawerIndex !== undefined 
+                        ? 'Drag files here or use the import button'
+                        : 'Import your first file to get started'
+                      }
                     </Text>
                   )}
                 </View>
               ) : (
                 files.map((file, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={`${file.name}-${index}`}
                     style={styles.fileItem}
                     onPress={() => handleFilePress(file)}
                   >
@@ -106,11 +145,7 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
       <FileViewer
         visible={!!selectedFile}
         file={selectedFile}
-        fileUri={selectedFileUri}
-        onClose={() => {
-          setSelectedFile(null);
-          setSelectedFileUri('');
-        }}
+        onClose={handleFileViewerClose}
       />
     </>
   );
@@ -143,10 +178,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  drawerIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  drawerIndicatorText: {
+    color: '#333',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 8,
   },
   importSection: {
     padding: 20,

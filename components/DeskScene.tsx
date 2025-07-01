@@ -11,6 +11,7 @@ import Pen from './Pen';
 import DeskFile from './DeskFile';
 import DeskFolder from './DeskFolder';
 import AddItemModal from './AddItemModal';
+import DragDropManager from './DragDropManager';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -46,6 +47,10 @@ export interface DeskFolderData {
   files: FileData[];
 }
 
+export interface DrawerData {
+  files: FileData[];
+}
+
 export default function DeskScene() {
   const [stickyNotes, setStickyNotes] = useState<StickyNoteData[]>([
     { id: '1', text: 'Call client at 3pm', color: 'urgent', x: 50, y: 150, zIndex: 1 },
@@ -72,10 +77,13 @@ export default function DeskScene() {
     }
   ]);
 
-  const [quickAccessFiles, setQuickAccessFiles] = useState<FileData[]>([
-    { name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' },
-    { name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' },
-    { name: 'Contract.docx', type: 'Word Document', size: '89 KB', date: '2 days ago' },
+  // File Tray Drawers (A-E)
+  const [fileTrayDrawers, setFileTrayDrawers] = useState<DrawerData[]>([
+    { files: [{ name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' }] }, // Drawer A
+    { files: [{ name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' }] }, // Drawer B
+    { files: [] }, // Drawer C
+    { files: [{ name: 'Contract.docx', type: 'Word Document', size: '89 KB', date: '2 days ago' }] }, // Drawer D
+    { files: [] }, // Drawer E
   ]);
 
   const [longTermFiles, setLongTermFiles] = useState<FileData[]>([
@@ -90,6 +98,8 @@ export default function DeskScene() {
   const [showFileCabinet, setShowFileCabinet] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<DeskFolderData | null>(null);
+  const [selectedDrawer, setSelectedDrawer] = useState<{ index: number; files: FileData[] } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [maxZIndex, setMaxZIndex] = useState(10);
 
   const getNextZIndex = () => {
@@ -169,12 +179,65 @@ export default function DeskScene() {
     setSelectedFolder(folder);
   };
 
-  const handleQuickAccessFileImported = (file: FileData) => {
-    setQuickAccessFiles(prev => [file, ...prev]);
+  const handleDrawerPress = (drawerIndex: number) => {
+    const drawer = fileTrayDrawers[drawerIndex];
+    const drawerLabels = ['A', 'B', 'C', 'D', 'E'];
+    setSelectedDrawer({ 
+      index: drawerIndex, 
+      files: drawer.files 
+    });
+  };
+
+  const handleFileDrop = (file: DeskFileData, drawerIndex: number) => {
+    // Convert DeskFileData to FileData and add to drawer
+    const fileData: FileData = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      date: file.date,
+    };
+
+    setFileTrayDrawers(prev => {
+      const newDrawers = [...prev];
+      newDrawers[drawerIndex] = {
+        ...newDrawers[drawerIndex],
+        files: [...newDrawers[drawerIndex].files, fileData],
+      };
+      return newDrawers;
+    });
+
+    // Remove file from desk
+    deleteDeskFile(file.id);
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrawerFileImported = (file: FileData, drawerIndex?: number) => {
+    if (drawerIndex !== undefined) {
+      setFileTrayDrawers(prev => {
+        const newDrawers = [...prev];
+        newDrawers[drawerIndex] = {
+          ...newDrawers[drawerIndex],
+          files: [file, ...newDrawers[drawerIndex].files],
+        };
+        return newDrawers;
+      });
+    }
   };
 
   const handleLongTermFileImported = (file: FileData) => {
     setLongTermFiles(prev => [file, ...prev]);
+  };
+
+  const getDrawerTitle = (drawerIndex: number) => {
+    const drawerLabels = ['A', 'B', 'C', 'D', 'E'];
+    return `Drawer ${drawerLabels[drawerIndex]}`;
   };
 
   // Sort all items by zIndex for proper rendering order
@@ -185,120 +248,149 @@ export default function DeskScene() {
   ].sort((a, b) => a.zIndex - b.zIndex);
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Desk Surface */}
-        <View style={styles.deskSurface}>
+    <DragDropManager
+      onFileDrop={handleFileDrop}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Desk Surface */}
+          <View style={styles.deskSurface}>
 
-          {/* Notepad */}
-          <View style={styles.notepadContainer}>
-            <Notepad />
+            {/* Notepad */}
+            <View style={styles.notepadContainer}>
+              <Notepad />
+            </View>
+
+            {/* File Tray with Enhanced Drawers */}
+            <View style={styles.fileTrayContainer}>
+              <FileTray 
+                onPress={() => setShowFileTray(true)}
+                onDrawerPress={handleDrawerPress}
+                isDropTarget={isDragging}
+                onDrop={handleFileDrop}
+              />
+            </View>
+
+            {/* File Cabinet */}
+            <View style={styles.cabinetContainer}>
+              <FileCabinet onPress={() => setShowFileCabinet(true)} />
+            </View>
+
+            {/* Coffee Mug */}
+            <View style={styles.coffeeContainer}>
+              <CoffeeMug />
+            </View>
+
+            {/* Pen */}
+            <View style={styles.penContainer}>
+              <Pen onPress={addStickyNote} />
+            </View>
+
+            {/* Render all items in zIndex order */}
+            {allItems.map(item => {
+              if (item.type === 'sticky') {
+                return (
+                  <StickyNote
+                    key={`sticky-${item.id}`}
+                    note={item}
+                    onUpdate={updateStickyNote}
+                    onDelete={deleteStickyNote}
+                  />
+                );
+              } else if (item.type === 'file') {
+                return (
+                  <DeskFile
+                    key={`file-${item.id}`}
+                    file={item}
+                    onUpdate={updateDeskFile}
+                    onDelete={deleteDeskFile}
+                  />
+                );
+              } else if (item.type === 'folder') {
+                return (
+                  <DeskFolder
+                    key={`folder-${item.id}`}
+                    folder={item}
+                    onUpdate={updateDeskFolder}
+                    onDelete={deleteDeskFolder}
+                    onPress={handleFolderPress}
+                  />
+                );
+              }
+              return null;
+            })}
+
+            {/* Add Button */}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Plus size={24} color="#FFF" />
+            </TouchableOpacity>
           </View>
+        </ScrollView>
 
-          {/* File Tray */}
-          <View style={styles.fileTrayContainer}>
-            <FileTray onPress={() => setShowFileTray(true)} />
-          </View>
-
-          {/* File Cabinet */}
-          <View style={styles.cabinetContainer}>
-            <FileCabinet onPress={() => setShowFileCabinet(true)} />
-          </View>
-
-          {/* Coffee Mug */}
-          <View style={styles.coffeeContainer}>
-            <CoffeeMug />
-          </View>
-
-          {/* Pen */}
-          <View style={styles.penContainer}>
-            <Pen onPress={addStickyNote} />
-          </View>
-
-          {/* Render all items in zIndex order */}
-          {allItems.map(item => {
-            if (item.type === 'sticky') {
-              return (
-                <StickyNote
-                  key={`sticky-${item.id}`}
-                  note={item}
-                  onUpdate={updateStickyNote}
-                  onDelete={deleteStickyNote}
-                />
-              );
-            } else if (item.type === 'file') {
-              return (
-                <DeskFile
-                  key={`file-${item.id}`}
-                  file={item}
-                  onUpdate={updateDeskFile}
-                  onDelete={deleteDeskFile}
-                />
-              );
-            } else if (item.type === 'folder') {
-              return (
-                <DeskFolder
-                  key={`folder-${item.id}`}
-                  folder={item}
-                  onUpdate={updateDeskFolder}
-                  onDelete={deleteDeskFolder}
-                  onPress={handleFolderPress}
-                />
-              );
-            }
-            return null;
-          })}
-
-          {/* Add Button */}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={24} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Modals */}
-      <FileModal
-        visible={showFileTray}
-        title="File Tray - Quick Access"
-        files={quickAccessFiles}
-        onClose={() => setShowFileTray(false)}
-        onFileImported={handleQuickAccessFileImported}
-        allowImport={true}
-      />
-
-      <FileModal
-        visible={showFileCabinet}
-        title="File Cabinet - Long-Term Storage"
-        files={longTermFiles}
-        onClose={() => setShowFileCabinet(false)}
-        onFileImported={handleLongTermFileImported}
-        allowImport={true}
-      />
-
-      {selectedFolder && (
+        {/* Modals */}
+        
+        {/* General File Tray Modal */}
         <FileModal
-          visible={!!selectedFolder}
-          title={selectedFolder.name}
-          files={selectedFolder.files}
-          onClose={() => setSelectedFolder(null)}
+          visible={showFileTray}
+          title="File Tray - Quick Access"
+          files={fileTrayDrawers.flatMap(drawer => drawer.files)}
+          onClose={() => setShowFileTray(false)}
+          onFileImported={(file) => handleDrawerFileImported(file, 0)} // Default to drawer A
+          allowImport={true}
         />
-      )}
 
-      <AddItemModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAddFile={addNewFile}
-        onAddFolder={addNewFolder}
-      />
-    </View>
+        {/* File Cabinet Modal */}
+        <FileModal
+          visible={showFileCabinet}
+          title="File Cabinet - Long-Term Storage"
+          files={longTermFiles}
+          onClose={() => setShowFileCabinet(false)}
+          onFileImported={handleLongTermFileImported}
+          allowImport={true}
+        />
+
+        {/* Folder Modal */}
+        {selectedFolder && (
+          <FileModal
+            visible={!!selectedFolder}
+            title={selectedFolder.name}
+            files={selectedFolder.files}
+            onClose={() => setSelectedFolder(null)}
+          />
+        )}
+
+        {/* Drawer Modal */}
+        {selectedDrawer && (
+          <FileModal
+            visible={!!selectedDrawer}
+            title={getDrawerTitle(selectedDrawer.index)}
+            files={selectedDrawer.files}
+            onClose={() => setSelectedDrawer(null)}
+            onFileImported={(file) => handleDrawerFileImported(file, selectedDrawer.index)}
+            allowImport={true}
+            drawerIndex={selectedDrawer.index}
+          />
+        )}
+
+        {/* Add Item Modal */}
+        <AddItemModal
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onAddFile={addNewFile}
+          onAddFolder={addNewFolder}
+        />
+      </View>
+    </DragDropManager>
   );
 }
 
