@@ -21,8 +21,8 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
       pan.setOffset({
-        x: pan.x._value,
-        y: pan.y._value,
+        x: (pan.x as any).__getValue(),
+        y: (pan.y as any).__getValue(),
       });
     },
     onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
@@ -30,8 +30,8 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
     }),
     onPanResponderRelease: () => {
       pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, pan.x._value));
-      const newY = Math.max(50, Math.min(600, pan.y._value));
+      const newX = Math.max(0, Math.min(300, (pan.x as any)._value));
+      const newY = Math.max(50, Math.min(600, (pan.y as any)._value));
       onUpdate(folder.id, { x: newX, y: newY });
     },
   });

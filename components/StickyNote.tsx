@@ -27,8 +27,8 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
       pan.setOffset({
-        x: pan.x._value,
-        y: pan.y._value,
+        x: (pan.x as any).__getValue(),
+        y: (pan.y as any).__getValue(),
       });
     },
     onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
@@ -36,8 +36,8 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
     }),
     onPanResponderRelease: () => {
       pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, pan.x._value));
-      const newY = Math.max(50, Math.min(600, pan.y._value));
+      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
+      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
       onUpdate(note.id, { x: newX, y: newY });
     },
   });

@@ -24,14 +24,14 @@ export default function FileImportButton({ onFileImported, style }: FileImportBu
 
   const getFileType = (mimeType: string, name: string): string => {
     const extension = name.split('.').pop()?.toLowerCase();
-    
+
     if (mimeType.includes('pdf') || extension === 'pdf') return 'PDF Document';
     if (mimeType.includes('word') || extension === 'docx' || extension === 'doc') return 'Word Document';
     if (mimeType.includes('text') || extension === 'txt') return 'Text Document';
     if (mimeType.includes('image') || ['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) return 'Image';
     if (mimeType.includes('excel') || extension === 'xlsx' || extension === 'xls') return 'Excel File';
     if (mimeType.includes('powerpoint') || extension === 'pptx' || extension === 'ppt') return 'PowerPoint';
-    
+
     return 'Document';
   };
 
@@ -47,7 +47,7 @@ export default function FileImportButton({ onFileImported, style }: FileImportBu
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        
+
         // Get file info
         const fileInfo = await FileSystem.getInfoAsync(file.uri);
         const fileSize = fileInfo.exists ? formatFileSize(fileInfo.size || 0) : '0 KB';
@@ -55,7 +55,7 @@ export default function FileImportButton({ onFileImported, style }: FileImportBu
 
         // For web platform, we'll store the file data differently
         let fileUri = file.uri;
-        
+
         if (Platform.OS === 'web') {
           // On web, we can use the blob URL directly
           fileUri = file.uri;
@@ -63,16 +63,16 @@ export default function FileImportButton({ onFileImported, style }: FileImportBu
           // On mobile, copy to a permanent location
           const fileName = `${Date.now()}_${file.name}`;
           const permanentUri = `${FileSystem.documentDirectory}imported_files/${fileName}`;
-          
+
           // Ensure directory exists
           await FileSystem.makeDirectoryAsync(`${FileSystem.documentDirectory}imported_files/`, { intermediates: true });
-          
+
           // Copy file to permanent location
           await FileSystem.copyAsync({
             from: file.uri,
             to: permanentUri,
           });
-          
+
           fileUri = permanentUri;
         }
 
@@ -101,7 +101,7 @@ export default function FileImportButton({ onFileImported, style }: FileImportBu
         }
 
         onFileImported(importedFile);
-        
+
         if (Platform.OS !== 'web') {
           Alert.alert('Success', `File "${file.name}" imported successfully!`);
         }

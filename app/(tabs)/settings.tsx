@@ -7,21 +7,21 @@ export default function SettingsScreen() {
     {
       title: 'Account',
       items: [
-        { icon: User, label: 'Profile', action: () => {} },
-        { icon: Bell, label: 'Notifications', action: () => {} },
+        { icon: User, label: 'Profile', action: () => { } },
+        { icon: Bell, label: 'Notifications', action: () => { } },
       ]
     },
     {
       title: 'Appearance',
       items: [
-        { icon: Palette, label: 'Theme', action: () => {} },
-        { icon: Moon, label: 'Dark Mode', action: () => {} },
+        { icon: Palette, label: 'Theme', action: () => { } },
+        { icon: Moon, label: 'Dark Mode', action: () => { } },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help & FAQ', action: () => {} },
+        { icon: HelpCircle, label: 'Help & FAQ', action: () => { } },
       ]
     }
   ];
@@ -32,7 +32,7 @@ export default function SettingsScreen() {
         <Settings size={32} color="#8B4513" />
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
-      
+
       <ScrollView style={styles.scrollView}>
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>

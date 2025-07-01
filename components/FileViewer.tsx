@@ -34,7 +34,7 @@ export default function FileViewer({ visible, file, fileUri, onClose }: FileView
 
     try {
       const extension = file.name.split('.').pop()?.toLowerCase();
-      
+
       if (['txt', 'md', 'json', 'js', 'ts', 'css', 'html'].includes(extension || '')) {
         // Read text files
         const content = await FileSystem.readAsStringAsync(fileUri);

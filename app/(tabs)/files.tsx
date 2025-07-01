@@ -30,7 +30,7 @@ export default function FilesScreen() {
         <FolderOpen size={32} color="#8B4513" />
         <Text style={styles.headerTitle}>File Explorer</Text>
       </View>
-      
+
       <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Files</Text>

@@ -61,16 +61,16 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
                 <X size={24} color="#666" />
               </TouchableOpacity>
             </View>
-            
+
             {allowImport && (
               <View style={styles.importSection}>
-                <FileImportButton 
+                <FileImportButton
                   onFileImported={handleFileImported}
                   style={styles.importButton}
                 />
               </View>
             )}
-            
+
             <ScrollView style={styles.fileList}>
               {files.length === 0 ? (
                 <View style={styles.emptyState}>
@@ -84,8 +84,8 @@ export default function FileModal({ visible, title, files, onClose, onFileImport
                 </View>
               ) : (
                 files.map((file, index) => (
-                  <TouchableOpacity 
-                    key={index} 
+                  <TouchableOpacity
+                    key={index}
                     style={styles.fileItem}
                     onPress={() => handleFilePress(file)}
                   >
