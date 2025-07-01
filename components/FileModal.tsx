@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
-import { X, FileText, File } from 'lucide-react-native';
+import { X, FileText, File, Upload } from 'lucide-react-native';
+import FileImportButton from './FileImportButton';
+import FileViewer from './FileViewer';
 import type { FileData } from './DeskScene';
 
 interface FileModalProps {
@@ -8,9 +10,14 @@ interface FileModalProps {
   title: string;
   files: FileData[];
   onClose: () => void;
+  onFileImported?: (file: FileData) => void;
+  allowImport?: boolean;
 }
 
-export default function FileModal({ visible, title, files, onClose }: FileModalProps) {
+export default function FileModal({ visible, title, files, onClose, onFileImported, allowImport = false }: FileModalProps) {
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [selectedFileUri, setSelectedFileUri] = useState<string>('');
+
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     switch (extension) {
@@ -24,37 +31,88 @@ export default function FileModal({ visible, title, files, onClose }: FileModalP
     }
   };
 
+  const handleFilePress = (file: FileData) => {
+    // For now, we'll create a mock URI since we don't have the actual file URIs stored
+    // In a real implementation, you'd store and retrieve the actual file URIs
+    const mockUri = `file://mock/${file.name}`;
+    setSelectedFile(file);
+    setSelectedFileUri(mockUri);
+  };
+
+  const handleFileImported = (file: FileData) => {
+    if (onFileImported) {
+      onFileImported(file);
+    }
+  };
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <X size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.fileList}>
-            {files.map((file, index) => (
-              <TouchableOpacity key={index} style={styles.fileItem}>
-                {getFileIcon(file.name)}
-                <View style={styles.fileInfo}>
-                  <Text style={styles.fileName}>{file.name}</Text>
-                  <Text style={styles.fileDetails}>{file.type} • {file.size}</Text>
-                  <Text style={styles.fileDate}>{file.date}</Text>
-                </View>
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{title}</Text>
+              <TouchableOpacity onPress={onClose}>
+                <X size={24} color="#666" />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
+            
+            {allowImport && (
+              <View style={styles.importSection}>
+                <FileImportButton 
+                  onFileImported={handleFileImported}
+                  style={styles.importButton}
+                />
+              </View>
+            )}
+            
+            <ScrollView style={styles.fileList}>
+              {files.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Upload size={48} color="#CCC" />
+                  <Text style={styles.emptyText}>No files yet</Text>
+                  {allowImport && (
+                    <Text style={styles.emptySubtext}>
+                      Import your first file to get started
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                files.map((file, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.fileItem}
+                    onPress={() => handleFilePress(file)}
+                  >
+                    {getFileIcon(file.name)}
+                    <View style={styles.fileInfo}>
+                      <Text style={styles.fileName}>{file.name}</Text>
+                      <Text style={styles.fileDetails}>{file.type} • {file.size}</Text>
+                      <Text style={styles.fileDate}>{file.date}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      <FileViewer
+        visible={!!selectedFile}
+        file={selectedFile}
+        fileUri={selectedFileUri}
+        onClose={() => {
+          setSelectedFile(null);
+          setSelectedFileUri('');
+        }}
+      />
+    </>
   );
 }
 
@@ -90,9 +148,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  importSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  importButton: {
+    width: '100%',
+  },
   fileList: {
     flex: 1,
     padding: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
   },
   fileItem: {
     flexDirection: 'row',

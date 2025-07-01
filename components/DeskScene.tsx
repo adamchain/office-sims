@@ -72,13 +72,13 @@ export default function DeskScene() {
     }
   ]);
 
-  const [quickAccessFiles] = useState<FileData[]>([
+  const [quickAccessFiles, setQuickAccessFiles] = useState<FileData[]>([
     { name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' },
     { name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' },
     { name: 'Contract.docx', type: 'Word Document', size: '89 KB', date: '2 days ago' },
   ]);
 
-  const [longTermFiles] = useState<FileData[]>([
+  const [longTermFiles, setLongTermFiles] = useState<FileData[]>([
     { name: 'Annual_Report_2023.pdf', type: 'PDF Document', size: '5.4 MB', date: 'Last week' },
     { name: 'Budget_Spreadsheet.xlsx', type: 'Excel File', size: '234 KB', date: 'Last month' },
     { name: 'Team_Photos.zip', type: 'Archive', size: '15.2 MB', date: '2 months ago' },
@@ -167,6 +167,14 @@ export default function DeskScene() {
 
   const handleFolderPress = (folder: DeskFolderData) => {
     setSelectedFolder(folder);
+  };
+
+  const handleQuickAccessFileImported = (file: FileData) => {
+    setQuickAccessFiles(prev => [file, ...prev]);
+  };
+
+  const handleLongTermFileImported = (file: FileData) => {
+    setLongTermFiles(prev => [file, ...prev]);
   };
 
   // Sort all items by zIndex for proper rendering order
@@ -262,6 +270,8 @@ export default function DeskScene() {
         title="File Tray - Quick Access"
         files={quickAccessFiles}
         onClose={() => setShowFileTray(false)}
+        onFileImported={handleQuickAccessFileImported}
+        allowImport={true}
       />
 
       <FileModal
@@ -269,6 +279,8 @@ export default function DeskScene() {
         title="File Cabinet - Long-Term Storage"
         files={longTermFiles}
         onClose={() => setShowFileCabinet(false)}
+        onFileImported={handleLongTermFileImported}
+        allowImport={true}
       />
 
       {selectedFolder && (
