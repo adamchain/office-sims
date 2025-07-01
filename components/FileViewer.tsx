@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Image, Dimensions, Platform } from 'react-native';
-import { X, Download, FileText, AlertCircle } from 'lucide-react-native';
+import { X, Download, FileText, CircleAlert as AlertCircle } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system';
 import * as WebBrowser from 'expo-web-browser';
 import type { FileData } from './DeskScene';
