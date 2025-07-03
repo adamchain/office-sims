@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Inbox } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { FileTrayData } from './DeskScene';
 
@@ -20,18 +21,38 @@ interface FileTrayProps {
 
 export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = false, onDrop, bounds }: FileTrayProps) {
   const [hovering, setHovering] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate({ x, y });
   };
 
   const handlePress = () => {
-    if (onDrop && isDropTarget) {
-      onDrop(null as any, 'filetray');
-    } else {
-      onPress();
+    if (!isDragging) {
+      if (onDrop && isDropTarget) {
+        onDrop(null as any, 'filetray');
+      } else {
+        onPress();
+      }
     }
   };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
 
   return (
     <DraggableItem
@@ -39,27 +60,25 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
       y={fileTray.y}
       zIndex={fileTray.zIndex}
       onPositionChange={handlePositionChange}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       bounds={bounds}
       disabled={isDropTarget}
     >
       <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>
-        <TouchableOpacity 
-          style={[styles.tray, hovering && styles.hoveredTray]} 
-          onPress={handlePress}
-          onPressIn={() => setHovering(true)}
-          onPressOut={() => setHovering(false)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.folderTab}>
-            <Text style={styles.tabText}>INBOX</Text>
+        <GestureDetector gesture={tapGesture}>
+          <View style={[styles.tray, hovering && styles.hoveredTray]}>
+            <View style={styles.folderTab}>
+              <Text style={styles.tabText}>INBOX</Text>
+            </View>
+            <View style={styles.folderBody}>
+              <Inbox size={32} color="#8B4513" />
+              <Text style={styles.fileCount}>
+                {fileTray.files.length} files
+              </Text>
+            </View>
           </View>
-          <View style={styles.folderBody}>
-            <Inbox size={32} color="#8B4513" />
-            <Text style={styles.fileCount}>
-              {fileTray.files.length} files
-            </Text>
-          </View>
-        </TouchableOpacity>
+        </GestureDetector>
 
         {isDropTarget && (
           <View style={styles.dropOverlay}>

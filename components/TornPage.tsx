@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2 } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { TornPageData } from './DeskScene';
 
@@ -19,6 +20,7 @@ interface TornPageProps {
 export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(page.text);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate(page.id, { x, y });
@@ -29,6 +31,29 @@ export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageP
     setIsEditing(false);
   };
 
+  const handlePress = () => {
+    if (!isDragging) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
+
   return (
     <>
       <DraggableItem
@@ -36,20 +61,20 @@ export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageP
         y={page.y}
         zIndex={page.zIndex}
         onPositionChange={handlePositionChange}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         bounds={bounds}
       >
-        <TouchableOpacity
-          style={styles.page}
-          onPress={() => setIsEditing(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.tornEdge} />
-          <View style={styles.pageContent}>
-            <Text style={styles.pageText} numberOfLines={8}>
-              {page.text}
-            </Text>
+        <GestureDetector gesture={tapGesture}>
+          <View style={styles.page}>
+            <View style={styles.tornEdge} />
+            <View style={styles.pageContent}>
+              <Text style={styles.pageText} numberOfLines={8}>
+                {page.text}
+              </Text>
+            </View>
           </View>
-        </TouchableOpacity>
+        </GestureDetector>
       </DraggableItem>
 
       <Modal

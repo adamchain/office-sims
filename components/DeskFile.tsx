@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2, FileText, File, Image as ImageIcon, FileVideo } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { DeskFileData } from './DeskScene';
 
@@ -19,6 +20,7 @@ interface DeskFileProps {
 export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(file.name);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate(file.id, { x, y });
@@ -51,6 +53,29 @@ export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileP
     setIsEditing(false);
   };
 
+  const handlePress = () => {
+    if (!isDragging) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
+
   return (
     <>
       <DraggableItem
@@ -58,20 +83,20 @@ export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileP
         y={file.y}
         zIndex={file.zIndex}
         onPositionChange={handlePositionChange}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         bounds={bounds}
       >
-        <TouchableOpacity
-          style={styles.file}
-          onPress={() => setIsEditing(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.fileIcon}>
-            {getFileIcon()}
+        <GestureDetector gesture={tapGesture}>
+          <View style={styles.file}>
+            <View style={styles.fileIcon}>
+              {getFileIcon()}
+            </View>
+            <Text style={styles.fileName} numberOfLines={2}>
+              {file.name}
+            </Text>
           </View>
-          <Text style={styles.fileName} numberOfLines={2}>
-            {file.name}
-          </Text>
-        </TouchableOpacity>
+        </GestureDetector>
       </DraggableItem>
 
       <Modal

@@ -60,6 +60,7 @@ export default function DraggableItem({
 
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
+    .minDistance(5) // Require minimum movement before starting drag
     .onStart(() => {
       isDragging.value = true;
       scale.value = withSpring(1.05, { damping: 15, stiffness: 400 });
@@ -113,6 +114,19 @@ export default function DraggableItem({
       }
     });
 
+  // Separate tap gesture that only triggers when not dragging
+  const tapGesture = Gesture.Tap()
+    .enabled(!disabled)
+    .onStart(() => {
+      // Only allow tap if we're not currently dragging
+      if (!isDragging.value) {
+        // This will be handled by the child component's onPress
+      }
+    });
+
+  // Combine gestures with proper priority
+  const combinedGesture = Gesture.Exclusive(panGesture, tapGesture);
+
   const animatedStyle = useAnimatedStyle(() => {
     const elevation = interpolate(
       isDragging.value ? 1 : 0,
@@ -139,7 +153,7 @@ export default function DraggableItem({
   });
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={combinedGesture}>
       <Animated.View style={animatedStyle}>
         {children}
       </Animated.View>

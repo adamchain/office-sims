@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2, FolderOpen, Folder } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { DeskFolderData } from './DeskScene';
 
@@ -20,6 +21,7 @@ interface DeskFolderProps {
 export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds }: DeskFolderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate(folder.id, { x, y });
@@ -31,12 +33,43 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds
   };
 
   const handlePress = () => {
-    onPress(folder);
+    if (!isDragging) {
+      onPress(folder);
+    }
   };
 
   const handleLongPress = () => {
-    setIsEditing(true);
+    if (!isDragging) {
+      setIsEditing(true);
+    }
   };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(500)
+    .onStart(() => {
+      if (!isDragging) {
+        handleLongPress();
+      }
+    });
+
+  const combinedGesture = Gesture.Race(longPressGesture, tapGesture);
 
   return (
     <>
@@ -45,26 +78,25 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds
         y={folder.y}
         zIndex={folder.zIndex}
         onPositionChange={handlePositionChange}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         bounds={bounds}
       >
-        <TouchableOpacity
-          style={styles.folder}
-          onPress={handlePress}
-          onLongPress={handleLongPress}
-          activeOpacity={0.8}
-        >
-          <View style={styles.folderTab}>
-            <Text style={styles.tabText} numberOfLines={1}>
-              {folder.name}
-            </Text>
+        <GestureDetector gesture={combinedGesture}>
+          <View style={styles.folder}>
+            <View style={styles.folderTab}>
+              <Text style={styles.tabText} numberOfLines={1}>
+                {folder.name}
+              </Text>
+            </View>
+            <View style={styles.folderBody}>
+              <FolderOpen size={32} color="#8B4513" />
+              <Text style={styles.fileCount}>
+                {folder.files.length} files
+              </Text>
+            </View>
           </View>
-          <View style={styles.folderBody}>
-            <FolderOpen size={32} color="#8B4513" />
-            <Text style={styles.fileCount}>
-              {folder.files.length} files
-            </Text>
-          </View>
-        </TouchableOpacity>
+        </GestureDetector>
       </DraggableItem>
 
       <Modal

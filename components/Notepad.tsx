@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { X, Save, Scissors } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { NotepadData } from './DeskScene';
 
@@ -19,6 +20,7 @@ interface NotepadProps {
 export default function Notepad({ notepad, onUpdate, onTearPage, bounds }: NotepadProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState(notepad.notes);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate({ x, y });
@@ -48,6 +50,29 @@ export default function Notepad({ notepad, onUpdate, onTearPage, bounds }: Notep
     }
   };
 
+  const handlePress = () => {
+    if (!isDragging) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
+
   return (
     <>
       <DraggableItem
@@ -55,24 +80,24 @@ export default function Notepad({ notepad, onUpdate, onTearPage, bounds }: Notep
         y={notepad.y}
         zIndex={notepad.zIndex}
         onPositionChange={handlePositionChange}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         bounds={bounds}
       >
-        <TouchableOpacity 
-          style={styles.notepad} 
-          onPress={() => setIsOpen(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.notepadSpiral}>
-            {[...Array(8)].map((_, i) => (
-              <View key={i} style={styles.spiralHole} />
-            ))}
+        <GestureDetector gesture={tapGesture}>
+          <View style={styles.notepad}>
+            <View style={styles.notepadSpiral}>
+              {[...Array(8)].map((_, i) => (
+                <View key={i} style={styles.spiralHole} />
+              ))}
+            </View>
+            <View style={styles.notepadContent}>
+              <Text style={styles.notepadText} numberOfLines={6}>
+                {notes}
+              </Text>
+            </View>
           </View>
-          <View style={styles.notepadContent}>
-            <Text style={styles.notepadText} numberOfLines={6}>
-              {notes}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        </GestureDetector>
       </DraggableItem>
 
       <Modal

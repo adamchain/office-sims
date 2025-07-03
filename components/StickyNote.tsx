@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2, Palette } from 'lucide-react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { StickyNoteData } from './DeskScene';
 
@@ -26,6 +27,7 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(note.text);
   const [editColor, setEditColor] = useState(note.color);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate(note.id, { x, y });
@@ -36,11 +38,37 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
     setIsEditing(false);
   };
 
+  const handlePress = () => {
+    // Only open if we're not dragging
+    if (!isDragging) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    // Add a small delay before allowing tap again
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  };
+
   const colors: Array<{ key: 'urgent' | 'normal' | 'low'; color: string; label: string }> = [
     { key: 'urgent', color: '#FF6B6B', label: 'Urgent' },
     { key: 'normal', color: '#FFE66D', label: 'Normal' },
     { key: 'low', color: '#4ECDC4', label: 'Low Priority' },
   ];
+
+  // Create a tap gesture that respects the dragging state
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      if (!isDragging) {
+        handlePress();
+      }
+    });
 
   return (
     <>
@@ -49,17 +77,19 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
         y={note.y}
         zIndex={note.zIndex}
         onPositionChange={handlePositionChange}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         bounds={bounds}
       >
-        <TouchableOpacity
-          style={[styles.stickyNote, { backgroundColor: colorMap[note.color] }]}
-          onPress={() => setIsEditing(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.noteText} numberOfLines={4}>
-            {note.text}
-          </Text>
-        </TouchableOpacity>
+        <GestureDetector gesture={tapGesture}>
+          <View
+            style={[styles.stickyNote, { backgroundColor: colorMap[note.color] }]}
+          >
+            <Text style={styles.noteText} numberOfLines={4}>
+              {note.text}
+            </Text>
+          </View>
+        </GestureDetector>
       </DraggableItem>
 
       <Modal
