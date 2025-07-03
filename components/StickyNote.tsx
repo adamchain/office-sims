@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { X, Trash2, Palette } from 'lucide-react-native';
+import { X, Trash2, ChevronDown } from 'lucide-react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DraggableItem from './DraggableItem';
 import type { StickyNoteData } from './DeskScene';
@@ -28,6 +28,7 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
   const [editText, setEditText] = useState(note.text);
   const [editColor, setEditColor] = useState(note.color);
   const [isDragging, setIsDragging] = useState(false);
+  const [showColorDropdown, setShowColorDropdown] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
     onUpdate(note.id, { x, y });
@@ -36,6 +37,7 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
   const handleSave = () => {
     onUpdate(note.id, { text: editText, color: editColor });
     setIsEditing(false);
+    setShowColorDropdown(false);
   };
 
   const handlePress = () => {
@@ -61,6 +63,11 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
     { key: 'normal', color: '#FFE66D', label: 'Normal' },
     { key: 'low', color: '#4ECDC4', label: 'Low Priority' },
   ];
+
+  const handleColorSelect = (colorKey: 'urgent' | 'normal' | 'low') => {
+    setEditColor(colorKey);
+    setShowColorDropdown(false);
+  };
 
   // Create a tap gesture that respects the dragging state
   const tapGesture = Gesture.Tap()
@@ -105,32 +112,43 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
                 <X size={24} color="#333" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Edit Sticky Note</Text>
-              <TouchableOpacity onPress={() => onDelete(note.id)}>
-                <Trash2 size={24} color="#FF4444" />
-              </TouchableOpacity>
+              <View style={styles.headerActions}>
+                <TouchableOpacity 
+                  style={styles.colorCircle}
+                  onPress={() => setShowColorDropdown(!showColorDropdown)}
+                >
+                  <View style={[styles.colorCircleInner, { backgroundColor: colorMap[editColor] }]} />
+                  <ChevronDown size={12} color="#333" style={styles.chevronIcon} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onDelete(note.id)}>
+                  <Trash2 size={24} color="#FF4444" />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={styles.colorPicker}>
-              <View style={styles.colorPickerHeader}>
-                <Palette size={20} color="#333" />
-                <Text style={styles.colorPickerTitle}>Color</Text>
-              </View>
-              <View style={styles.colorOptions}>
+            {showColorDropdown && (
+              <View style={styles.colorDropdown}>
                 {colors.map((colorOption) => (
                   <TouchableOpacity
                     key={colorOption.key}
                     style={[
-                      styles.colorOption,
+                      styles.colorDropdownItem,
                       { backgroundColor: colorOption.color },
-                      editColor === colorOption.key && styles.selectedColor,
+                      editColor === colorOption.key && styles.selectedDropdownItem,
                     ]}
-                    onPress={() => setEditColor(colorOption.key)}
+                    onPress={() => handleColorSelect(colorOption.key)}
                   >
-                    <Text style={styles.colorLabel}>{colorOption.label}</Text>
+                    <View style={styles.colorSwatch} />
+                    <Text style={styles.colorDropdownLabel}>{colorOption.label}</Text>
+                    {editColor === colorOption.key && (
+                      <View style={styles.checkmark}>
+                        <Text style={styles.checkmarkText}>✓</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
+            )}
 
             <TextInput
               style={styles.textInput}
@@ -197,41 +215,85 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-  },
-  colorPicker: {
-    marginBottom: 20,
-  },
-  colorPickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  colorPickerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
-  },
-  colorOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  colorOption: {
     flex: 1,
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    textAlign: 'center',
+    marginHorizontal: 10,
   },
-  selectedColor: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  colorCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#333',
+    backgroundColor: '#FFE66D',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  colorCircleInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  chevronIcon: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#FFF',
+    borderRadius: 6,
+    padding: 1,
+  },
+  colorDropdown: {
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  selectedDropdownItem: {
+    borderWidth: 2,
     borderColor: '#333',
   },
-  colorLabel: {
-    fontSize: 10,
+  colorSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginRight: 12,
+  },
+  colorDropdownLabel: {
+    fontSize: 14,
     color: '#333',
     fontWeight: '500',
+    flex: 1,
+  },
+  checkmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   textInput: {
     backgroundColor: 'rgba(255,255,255,0.7)',
