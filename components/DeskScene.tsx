@@ -5,12 +5,14 @@ import { router, usePathname } from 'expo-router';
 import Notepad from './Notepad';
 import StickyNote from './StickyNote';
 import FileTray from './FileTray';
-import FileCabinet from './FileCabinet';
+import FileDrawer from './FileDrawer';
+import RecycleBin from './RecycleBin';
 import FileModal from './FileModal';
 import Pen from './Pen';
 import DeskFile from './DeskFile';
 import DeskFolder from './DeskFolder';
 import AddItemModal from './AddItemModal';
+import RecycleBinModal, { DeletedItem } from './RecycleBinModal';
 import TornPage from './TornPage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -106,7 +108,7 @@ export default function DeskScene() {
     x: 30,
     y: 40,
     zIndex: 100,
-    notes: 'Welcome to your desk!\n\nTap items to interact:\n• Yellow notepad for daily notes\n• Sticky notes for quick reminders\n• Manila folder for quick access files\n• File cabinet for long-term storage\n• Pen to add new sticky notes'
+    notes: 'Welcome to your desk!\n\nTap items to interact:\n• Yellow notepad for daily notes\n• Sticky notes for quick reminders\n• Manila folder for quick access files\n• File drawer for long-term storage\n• Pen to add new sticky notes\n• Recycle bin to restore deleted items'
   });
 
   const [fileTray, setFileTray] = useState<FileTrayData>({
@@ -128,8 +130,11 @@ export default function DeskScene() {
     { name: 'Backup_Database.sql', type: 'Database', size: '45 MB', date: '6 months ago' },
   ]);
 
+  const [deletedItems, setDeletedItems] = useState<DeletedItem[]>([]);
+
   const [showFileTray, setShowFileTray] = useState(false);
-  const [showFileCabinet, setShowFileCabinet] = useState(false);
+  const [showFileDrawer, setShowFileDrawer] = useState(false);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<DeskFolderData | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -137,13 +142,6 @@ export default function DeskScene() {
 
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
-
-  // Listen for navigation to add tab
-  React.useEffect(() => {
-    if (pathname === '/add') {
-      setShowAddModal(true);
-    }
-  }, [pathname]);
 
   const getNextZIndex = () => {
     setMaxZIndex(prev => prev + 1);
@@ -157,6 +155,17 @@ export default function DeskScene() {
   };
 
   const deleteStickyNote = (id: string) => {
+    const noteToDelete = stickyNotes.find(note => note.id === id);
+    if (noteToDelete) {
+      const deletedItem: DeletedItem = {
+        id: noteToDelete.id,
+        name: noteToDelete.text.substring(0, 30) + (noteToDelete.text.length > 30 ? '...' : ''),
+        type: 'stickyNote',
+        originalData: noteToDelete,
+        deletedAt: new Date().toLocaleDateString(),
+      };
+      setDeletedItems(prev => [deletedItem, ...prev]);
+    }
     setStickyNotes(prev => prev.filter(note => note.id !== id));
   };
 
@@ -179,6 +188,17 @@ export default function DeskScene() {
   };
 
   const deleteDeskFile = (id: string) => {
+    const fileToDelete = deskFiles.find(file => file.id === id);
+    if (fileToDelete) {
+      const deletedItem: DeletedItem = {
+        id: fileToDelete.id,
+        name: fileToDelete.name,
+        type: 'file',
+        originalData: fileToDelete,
+        deletedAt: new Date().toLocaleDateString(),
+      };
+      setDeletedItems(prev => [deletedItem, ...prev]);
+    }
     setDeskFiles(prev => prev.filter(file => file.id !== id));
   };
 
@@ -189,6 +209,17 @@ export default function DeskScene() {
   };
 
   const deleteDeskFolder = (id: string) => {
+    const folderToDelete = deskFolders.find(folder => folder.id === id);
+    if (folderToDelete) {
+      const deletedItem: DeletedItem = {
+        id: folderToDelete.id,
+        name: folderToDelete.name,
+        type: 'folder',
+        originalData: folderToDelete,
+        deletedAt: new Date().toLocaleDateString(),
+      };
+      setDeletedItems(prev => [deletedItem, ...prev]);
+    }
     setDeskFolders(prev => prev.filter(folder => folder.id !== id));
   };
 
@@ -226,6 +257,17 @@ export default function DeskScene() {
   };
 
   const deleteTornPage = (id: string) => {
+    const pageToDelete = tornPages.find(page => page.id === id);
+    if (pageToDelete) {
+      const deletedItem: DeletedItem = {
+        id: pageToDelete.id,
+        name: pageToDelete.text.substring(0, 30) + (pageToDelete.text.length > 30 ? '...' : ''),
+        type: 'stickyNote', // Treat torn pages like sticky notes in recycle bin
+        originalData: pageToDelete,
+        deletedAt: new Date().toLocaleDateString(),
+      };
+      setDeletedItems(prev => [deletedItem, ...prev]);
+    }
     setTornPages(prev => prev.filter(page => page.id !== id));
   };
 
@@ -288,12 +330,33 @@ export default function DeskScene() {
     setLongTermFiles(prev => [file, ...prev]);
   };
 
-  const handleAddModalClose = () => {
-    setShowAddModal(false);
-    // Navigate back to desk if we came from the add tab
-    if (pathname === '/add') {
-      router.replace('/');
+  const handleRestoreItem = (item: DeletedItem) => {
+    switch (item.type) {
+      case 'file':
+        setDeskFiles(prev => [...prev, item.originalData]);
+        break;
+      case 'folder':
+        setDeskFolders(prev => [...prev, item.originalData]);
+        break;
+      case 'stickyNote':
+        if (item.originalData.text !== undefined) {
+          // It's a sticky note
+          setStickyNotes(prev => [...prev, item.originalData]);
+        } else {
+          // It's a torn page
+          setTornPages(prev => [...prev, item.originalData]);
+        }
+        break;
     }
+    setDeletedItems(prev => prev.filter(deletedItem => deletedItem.id !== item.id));
+  };
+
+  const handlePermanentDelete = (itemId: string) => {
+    setDeletedItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const handleEmptyBin = () => {
+    setDeletedItems([]);
   };
 
   const deskWidth = Platform.OS === 'web' ? screenWidth - 20 : screenWidth * 1.5;
@@ -328,14 +391,32 @@ export default function DeskScene() {
         {/* Desk Surface */}
         <View style={[styles.deskSurface, { width: deskWidth, height: deskHeight }]}>
 
-          {/* File Cabinet - Fixed position */}
-          <View style={styles.cabinetContainer}>
-            <FileCabinet onPress={() => setShowFileCabinet(true)} />
+          {/* File Drawer - Fixed position below desk */}
+          <View style={styles.drawerContainer}>
+            <FileDrawer onPress={() => setShowFileDrawer(true)} />
+          </View>
+
+          {/* Recycle Bin - Fixed position below desk */}
+          <View style={styles.recycleBinContainer}>
+            <RecycleBin 
+              onPress={() => setShowRecycleBin(true)} 
+              itemCount={deletedItems.length}
+            />
           </View>
 
           {/* Pen - Fixed position */}
           <View style={styles.penContainer}>
             <Pen onPress={addStickyNote} />
+          </View>
+
+          {/* Add Button - Fixed position */}
+          <View style={styles.addButtonContainer}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Plus size={24} color="#FFF" />
+            </TouchableOpacity>
           </View>
 
           {/* Draggable Items */}
@@ -410,12 +491,12 @@ export default function DeskScene() {
         allowImport={true}
       />
 
-      {/* File Cabinet Modal */}
+      {/* File Drawer Modal */}
       <FileModal
-        visible={showFileCabinet}
-        title="File Cabinet - Long-Term Storage"
+        visible={showFileDrawer}
+        title="File Storage - Long-Term Storage"
         files={longTermFiles}
-        onClose={() => setShowFileCabinet(false)}
+        onClose={() => setShowFileDrawer(false)}
         onFileImported={handleLongTermFileImported}
         allowImport={true}
       />
@@ -430,10 +511,20 @@ export default function DeskScene() {
         />
       )}
 
+      {/* Recycle Bin Modal */}
+      <RecycleBinModal
+        visible={showRecycleBin}
+        deletedItems={deletedItems}
+        onClose={() => setShowRecycleBin(false)}
+        onRestore={handleRestoreItem}
+        onPermanentDelete={handlePermanentDelete}
+        onEmptyBin={handleEmptyBin}
+      />
+
       {/* Add Item Modal */}
       <AddItemModal
         visible={showAddModal}
-        onClose={handleAddModalClose}
+        onClose={() => setShowAddModal(false)}
         onAddFile={addNewFile}
         onAddFolder={addNewFolder}
         onAddStickyNote={addStickyNote}
@@ -465,10 +556,16 @@ const styles = StyleSheet.create({
     elevation: 8,
     position: 'relative',
   },
-  cabinetContainer: {
+  drawerContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: -40,
     left: 20,
+    zIndex: 300,
+  },
+  recycleBinContainer: {
+    position: 'absolute',
+    bottom: -50,
+    right: 20,
     zIndex: 300,
   },
   penContainer: {
@@ -476,5 +573,24 @@ const styles = StyleSheet.create({
     top: 180,
     left: 180,
     zIndex: 300,
+  },
+  addButtonContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 300,
+  },
+  addButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#8B4513',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });
