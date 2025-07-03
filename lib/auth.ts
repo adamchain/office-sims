@@ -41,10 +41,100 @@ export interface AuthState {
   isAuthenticated: boolean;
 }
 
+// Utility function to sanitize phone numbers for use as SecureStore keys
+function sanitizePhoneForKey(phoneNumber: string): string {
+  // Remove all non-alphanumeric characters and replace with underscores
+  return phoneNumber.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+// Twilio service for production SMS
+class TwilioService {
+  private accountSid: string;
+  private authToken: string;
+  private serviceSid: string;
+
+  constructor() {
+    // These should be set in your environment variables
+    this.accountSid = process.env.EXPO_PUBLIC_TWILIO_ACCOUNT_SID || '';
+    this.authToken = process.env.EXPO_PUBLIC_TWILIO_AUTH_TOKEN || '';
+    this.serviceSid = process.env.EXPO_PUBLIC_TWILIO_VERIFY_SERVICE_SID || '';
+  }
+
+  async sendVerificationCode(phoneNumber: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // In production, this would make an API call to your backend
+      // which would then use Twilio's server-side SDK
+      const response = await fetch('/api/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        return {
+          success: true,
+          message: `Verification code sent to ${phoneNumber}`
+        };
+      } else {
+        return {
+          success: false,
+          message: result.error || 'Failed to send verification code'
+        };
+      }
+    } catch (error) {
+      console.error('Error sending verification code via Twilio:', error);
+      return {
+        success: false,
+        message: 'Failed to send verification code. Please try again.'
+      };
+    }
+  }
+
+  async verifyCode(phoneNumber: string, code: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // In production, this would make an API call to your backend
+      // which would then use Twilio's server-side SDK
+      const response = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phoneNumber, code }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        return {
+          success: true,
+          message: 'Code verified successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: result.error || 'Invalid verification code'
+        };
+      }
+    } catch (error) {
+      console.error('Error verifying code via Twilio:', error);
+      return {
+        success: false,
+        message: 'Failed to verify code. Please try again.'
+      };
+    }
+  }
+}
+
 class AuthService {
   private static instance: AuthService;
   private user: User | null = null;
   private listeners: ((state: AuthState) => void)[] = [];
+  private twilioService: TwilioService;
+  private isDevelopment: boolean;
 
   static getInstance(): AuthService {
     if (!AuthService.instance) {
@@ -54,6 +144,8 @@ class AuthService {
   }
 
   private constructor() {
+    this.twilioService = new TwilioService();
+    this.isDevelopment = __DEV__ || process.env.NODE_ENV === 'development';
     this.initializeAuth();
   }
 
@@ -95,21 +187,23 @@ class AuthService {
 
   async sendVerificationCode(phoneNumber: string): Promise<{ success: boolean; message: string }> {
     try {
-      // Simulate sending SMS (in production, this would call your SMS service)
+      // Use Twilio in production, fallback to demo mode in development
+      if (!this.isDevelopment) {
+        return await this.twilioService.sendVerificationCode(phoneNumber);
+      }
+
+      // Development mode - simulate sending SMS
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       
+      // Sanitize phone number for SecureStore key
+      const sanitizedPhone = sanitizePhoneForKey(phoneNumber);
+      
       // Store the code temporarily (in production, this would be server-side)
-      await storage.setItem(`verification_code_${phoneNumber}`, code);
-      await storage.setItem(`verification_code_timestamp_${phoneNumber}`, Date.now().toString());
+      await storage.setItem(`verification_code_${sanitizedPhone}`, code);
+      await storage.setItem(`verification_code_timestamp_${sanitizedPhone}`, Date.now().toString());
       
       // For demo purposes, we'll show the code in console
       console.log(`Verification code for ${phoneNumber}: ${code}`);
-      
-      // In production, you would integrate with SMS services like:
-      // - Twilio
-      // - AWS SNS
-      // - Firebase Auth
-      // - Supabase Auth with SMS
       
       return {
         success: true,
@@ -126,39 +220,50 @@ class AuthService {
 
   async verifyCode(phoneNumber: string, code: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      // Get stored code and timestamp
-      const storedCode = await storage.getItem(`verification_code_${phoneNumber}`);
-      const timestamp = await storage.getItem(`verification_code_timestamp_${phoneNumber}`);
-      
-      if (!storedCode || !timestamp) {
-        return {
-          success: false,
-          message: 'No verification code found. Please request a new code.'
-        };
-      }
+      // Use Twilio in production, fallback to demo mode in development
+      if (!this.isDevelopment) {
+        const twilioResult = await this.twilioService.verifyCode(phoneNumber, code);
+        if (!twilioResult.success) {
+          return twilioResult;
+        }
+      } else {
+        // Development mode - verify against stored code
+        const sanitizedPhone = sanitizePhoneForKey(phoneNumber);
+        
+        // Get stored code and timestamp
+        const storedCode = await storage.getItem(`verification_code_${sanitizedPhone}`);
+        const timestamp = await storage.getItem(`verification_code_timestamp_${sanitizedPhone}`);
+        
+        if (!storedCode || !timestamp) {
+          return {
+            success: false,
+            message: 'No verification code found. Please request a new code.'
+          };
+        }
 
-      // Check if code is expired (5 minutes)
-      const codeAge = Date.now() - parseInt(timestamp);
-      if (codeAge > 5 * 60 * 1000) {
-        await storage.removeItem(`verification_code_${phoneNumber}`);
-        await storage.removeItem(`verification_code_timestamp_${phoneNumber}`);
-        return {
-          success: false,
-          message: 'Verification code has expired. Please request a new code.'
-        };
-      }
+        // Check if code is expired (5 minutes)
+        const codeAge = Date.now() - parseInt(timestamp);
+        if (codeAge > 5 * 60 * 1000) {
+          await storage.removeItem(`verification_code_${sanitizedPhone}`);
+          await storage.removeItem(`verification_code_timestamp_${sanitizedPhone}`);
+          return {
+            success: false,
+            message: 'Verification code has expired. Please request a new code.'
+          };
+        }
 
-      // Verify code
-      if (storedCode !== code) {
-        return {
-          success: false,
-          message: 'Invalid verification code. Please try again.'
-        };
-      }
+        // Verify code
+        if (storedCode !== code) {
+          return {
+            success: false,
+            message: 'Invalid verification code. Please try again.'
+          };
+        }
 
-      // Clean up verification code
-      await storage.removeItem(`verification_code_${phoneNumber}`);
-      await storage.removeItem(`verification_code_timestamp_${phoneNumber}`);
+        // Clean up verification code
+        await storage.removeItem(`verification_code_${sanitizedPhone}`);
+        await storage.removeItem(`verification_code_timestamp_${sanitizedPhone}`);
+      }
 
       // Create or get user
       let user = await this.getUserByPhone(phoneNumber);
