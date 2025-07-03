@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
