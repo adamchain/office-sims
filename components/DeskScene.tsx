@@ -143,6 +143,13 @@ export default function DeskScene() {
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
 
+  // Listen for navigation to add tab
+  React.useEffect(() => {
+    if (pathname === '/add') {
+      setShowAddModal(true);
+    }
+  }, [pathname]);
+
   const getNextZIndex = () => {
     setMaxZIndex(prev => prev + 1);
     return maxZIndex + 1;
@@ -359,6 +366,14 @@ export default function DeskScene() {
     setDeletedItems([]);
   };
 
+  const handleAddModalClose = () => {
+    setShowAddModal(false);
+    // Navigate back to desk if we came from the add tab
+    if (pathname === '/add') {
+      router.replace('/');
+    }
+  };
+
   const deskWidth = Platform.OS === 'web' ? screenWidth - 20 : screenWidth * 1.5;
   const deskHeight = Platform.OS === 'web' ? screenHeight * 0.9 : screenHeight * 1.2;
 
@@ -407,16 +422,6 @@ export default function DeskScene() {
           {/* Pen - Fixed position */}
           <View style={styles.penContainer}>
             <Pen onPress={addStickyNote} />
-          </View>
-
-          {/* Add Button - Fixed position */}
-          <View style={styles.addButtonContainer}>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Plus size={24} color="#FFF" />
-            </TouchableOpacity>
           </View>
 
           {/* Draggable Items */}
@@ -524,7 +529,7 @@ export default function DeskScene() {
       {/* Add Item Modal */}
       <AddItemModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={handleAddModalClose}
         onAddFile={addNewFile}
         onAddFolder={addNewFolder}
         onAddStickyNote={addStickyNote}
@@ -573,24 +578,5 @@ const styles = StyleSheet.create({
     top: 180,
     left: 180,
     zIndex: 300,
-  },
-  addButtonContainer: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 300,
-  },
-  addButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#8B4513',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
   },
 });
