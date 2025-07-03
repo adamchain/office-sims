@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, PanResponder, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Inbox } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
 import type { FileTrayData } from './DeskScene';
 
 interface FileTrayProps {
@@ -14,27 +15,9 @@ interface FileTrayProps {
 export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = false, onDrop }: FileTrayProps) {
   const [hovering, setHovering] = useState(false);
 
-  const pan = new Animated.ValueXY({ x: fileTray.x, y: fileTray.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
-      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
-      onUpdate({ x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate({ x, y });
+  };
 
   const handlePress = () => {
     if (onDrop && isDropTarget) {
@@ -45,47 +28,45 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
   };
 
   return (
-    <Animated.View
-      style={[
-        styles.trayContainer,
-        {
-          transform: pan.getTranslateTransform(),
-          zIndex: fileTray.zIndex,
-        },
-        isDropTarget && styles.dropTarget,
-      ]}
-      {...panResponder.panHandlers}
+    <DraggableItem
+      x={fileTray.x}
+      y={fileTray.y}
+      zIndex={fileTray.zIndex}
+      onPositionChange={handlePositionChange}
+      bounds={{ minX: 0, maxX: 300, minY: 50, maxY: 650 }}
+      disabled={isDropTarget}
     >
-      <TouchableOpacity 
-        style={[styles.tray, hovering && styles.hoveredTray]} 
-        onPress={handlePress}
-        onPressIn={() => setHovering(true)}
-        onPressOut={() => setHovering(false)}
-      >
-        {/* Manila folder style */}
-        <View style={styles.folderTab}>
-          <Text style={styles.tabText}>INBOX</Text>
-        </View>
-        <View style={styles.folderBody}>
-          <Inbox size={32} color="#8B4513" />
-          <Text style={styles.fileCount}>
-            {fileTray.files.length} files
-          </Text>
-        </View>
-      </TouchableOpacity>
+      <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>
+        <TouchableOpacity 
+          style={[styles.tray, hovering && styles.hoveredTray]} 
+          onPress={handlePress}
+          onPressIn={() => setHovering(true)}
+          onPressOut={() => setHovering(false)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.folderTab}>
+            <Text style={styles.tabText}>INBOX</Text>
+          </View>
+          <View style={styles.folderBody}>
+            <Inbox size={32} color="#8B4513" />
+            <Text style={styles.fileCount}>
+              {fileTray.files.length} files
+            </Text>
+          </View>
+        </TouchableOpacity>
 
-      {isDropTarget && (
-        <View style={styles.dropOverlay}>
-          <Text style={styles.dropText}>Drop file here</Text>
-        </View>
-      )}
-    </Animated.View>
+        {isDropTarget && (
+          <View style={styles.dropOverlay}>
+            <Text style={styles.dropText}>Drop file here</Text>
+          </View>
+        )}
+      </View>
+    </DraggableItem>
   );
 }
 
 const styles = StyleSheet.create({
   trayContainer: {
-    position: 'absolute',
     width: 120,
     height: 90,
   },
@@ -96,7 +77,6 @@ const styles = StyleSheet.create({
     flex: 1,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
   },

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, PanResponder, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { X, Save, Scissors } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
 import type { NotepadData } from './DeskScene';
 
 interface NotepadProps {
@@ -13,27 +14,9 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState(notepad.notes);
 
-  const pan = new Animated.ValueXY({ x: notepad.x, y: notepad.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
-      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
-      onUpdate({ x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate({ x, y });
+  };
 
   const handleSave = () => {
     onUpdate({ notes });
@@ -42,14 +25,12 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
 
   const handleTearPage = () => {
     if (notes.trim()) {
-      // Take the first few lines or a portion of the notes for the torn page
       const lines = notes.split('\n');
       const pageContent = lines.slice(0, Math.min(lines.length, 6)).join('\n');
       
       if (pageContent.trim()) {
         onTearPage(pageContent);
         
-        // Remove the torn content from the notepad
         const remainingContent = lines.slice(6).join('\n');
         setNotes(remainingContent);
         onUpdate({ notes: remainingContent });
@@ -63,17 +44,18 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.notepadContainer,
-          {
-            transform: pan.getTranslateTransform(),
-            zIndex: notepad.zIndex,
-          },
-        ]}
-        {...panResponder.panHandlers}
+      <DraggableItem
+        x={notepad.x}
+        y={notepad.y}
+        zIndex={notepad.zIndex}
+        onPositionChange={handlePositionChange}
+        bounds={{ minX: 0, maxX: 280, minY: 50, maxY: 550 }}
       >
-        <TouchableOpacity style={styles.notepad} onPress={() => setIsOpen(true)}>
+        <TouchableOpacity 
+          style={styles.notepad} 
+          onPress={() => setIsOpen(true)}
+          activeOpacity={0.8}
+        >
           <View style={styles.notepadSpiral}>
             {[...Array(8)].map((_, i) => (
               <View key={i} style={styles.spiralHole} />
@@ -85,7 +67,7 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
             </Text>
           </View>
         </TouchableOpacity>
-      </Animated.View>
+      </DraggableItem>
 
       <Modal
         visible={isOpen}
@@ -126,11 +108,6 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
 }
 
 const styles = StyleSheet.create({
-  notepadContainer: {
-    position: 'absolute',
-    width: 140,
-    height: 180,
-  },
   notepad: {
     width: 140,
     height: 180,
@@ -138,7 +115,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
     transform: [{ rotate: '-3deg' }],

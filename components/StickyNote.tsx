@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, PanResponder, Animated } from 'react-native';
-import { X, Trash2, Palette } from 'lucide-react-native';
-import type { StickyNoteData } from './DeskScene';
 import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { X, Trash2, Palette } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
+import type { StickyNoteData } from './DeskScene';
 
 interface StickyNoteProps {
   note: StickyNoteData;
@@ -20,27 +21,9 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
   const [editText, setEditText] = useState(note.text);
   const [editColor, setEditColor] = useState(note.color);
 
-  const pan = new Animated.ValueXY({ x: note.x, y: note.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
-      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
-      onUpdate(note.id, { x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate(note.id, { x, y });
+  };
 
   const handleSave = () => {
     onUpdate(note.id, { text: editText, color: editColor });
@@ -55,26 +38,23 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.stickyNote,
-          {
-            backgroundColor: colorMap[note.color],
-            transform: pan.getTranslateTransform(),
-            zIndex: note.zIndex,
-          },
-        ]}
-        {...panResponder.panHandlers}
+      <DraggableItem
+        x={note.x}
+        y={note.y}
+        zIndex={note.zIndex}
+        onPositionChange={handlePositionChange}
+        bounds={{ minX: 0, maxX: 350, minY: 50, maxY: 650 }}
       >
         <TouchableOpacity
-          style={styles.noteContent}
+          style={[styles.stickyNote, { backgroundColor: colorMap[note.color] }]}
           onPress={() => setIsEditing(true)}
+          activeOpacity={0.8}
         >
           <Text style={styles.noteText} numberOfLines={4}>
             {note.text}
           </Text>
         </TouchableOpacity>
-      </Animated.View>
+      </DraggableItem>
 
       <Modal
         visible={isEditing}
@@ -137,21 +117,16 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
 
 const styles = StyleSheet.create({
   stickyNote: {
-    position: 'absolute',
     width: 80,
     height: 80,
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    transform: [{ rotate: '2deg' }],
-  },
-  noteContent: {
-    flex: 1,
     padding: 8,
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowRadius: 6,
+    elevation: 4,
+    transform: [{ rotate: '2deg' }],
   },
   noteText: {
     fontSize: 9,

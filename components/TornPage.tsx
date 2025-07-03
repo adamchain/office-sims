@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, PanResponder, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2 } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
 import type { TornPageData } from './DeskScene';
 
 interface TornPageProps {
@@ -13,27 +14,9 @@ export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(page.text);
 
-  const pan = new Animated.ValueXY({ x: page.x, y: page.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
-      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
-      onUpdate(page.id, { x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate(page.id, { x, y });
+  };
 
   const handleSave = () => {
     onUpdate(page.id, { text: editText });
@@ -42,21 +25,18 @@ export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.pageContainer,
-          {
-            transform: pan.getTranslateTransform(),
-            zIndex: page.zIndex,
-          },
-        ]}
-        {...panResponder.panHandlers}
+      <DraggableItem
+        x={page.x}
+        y={page.y}
+        zIndex={page.zIndex}
+        onPositionChange={handlePositionChange}
+        bounds={{ minX: 0, maxX: 300, minY: 50, maxY: 570 }}
       >
         <TouchableOpacity
           style={styles.page}
           onPress={() => setIsEditing(true)}
+          activeOpacity={0.8}
         >
-          {/* Torn edge effect */}
           <View style={styles.tornEdge} />
           <View style={styles.pageContent}>
             <Text style={styles.pageText} numberOfLines={8}>
@@ -64,7 +44,7 @@ export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
             </Text>
           </View>
         </TouchableOpacity>
-      </Animated.View>
+      </DraggableItem>
 
       <Modal
         visible={isEditing}
@@ -105,18 +85,13 @@ export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
 }
 
 const styles = StyleSheet.create({
-  pageContainer: {
-    position: 'absolute',
+  page: {
     width: 120,
     height: 160,
-  },
-  page: {
-    flex: 1,
     backgroundColor: '#FFFACD',
     borderRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
     transform: [{ rotate: '1deg' }],

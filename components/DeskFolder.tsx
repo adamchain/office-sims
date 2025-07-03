@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, PanResponder, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2, FolderOpen, Folder } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
 import type { DeskFolderData } from './DeskScene';
 
 interface DeskFolderProps {
@@ -14,27 +15,9 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
 
-  const pan = new Animated.ValueXY({ x: folder.x, y: folder.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any)._value));
-      const newY = Math.max(50, Math.min(600, (pan.y as any)._value));
-      onUpdate(folder.id, { x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate(folder.id, { x, y });
+  };
 
   const handleSave = () => {
     onUpdate(folder.id, { name: editName });
@@ -51,20 +34,18 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.folderContainer,
-          {
-            transform: pan.getTranslateTransform(),
-            zIndex: folder.zIndex,
-          },
-        ]}
-        {...panResponder.panHandlers}
+      <DraggableItem
+        x={folder.x}
+        y={folder.y}
+        zIndex={folder.zIndex}
+        onPositionChange={handlePositionChange}
+        bounds={{ minX: 0, maxX: 330, minY: 50, maxY: 650 }}
       >
         <TouchableOpacity
           style={styles.folder}
           onPress={handlePress}
           onLongPress={handleLongPress}
+          activeOpacity={0.8}
         >
           <View style={styles.folderTab}>
             <Text style={styles.tabText} numberOfLines={1}>
@@ -78,7 +59,7 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
             </Text>
           </View>
         </TouchableOpacity>
-      </Animated.View>
+      </DraggableItem>
 
       <Modal
         visible={isEditing}
@@ -129,16 +110,11 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
 }
 
 const styles = StyleSheet.create({
-  folderContainer: {
-    position: 'absolute',
+  folder: {
     width: 90,
     height: 70,
-  },
-  folder: {
-    flex: 1,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
   },

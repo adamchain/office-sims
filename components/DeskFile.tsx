@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, PanResponder, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { X, Trash2, FileText, File, Image as ImageIcon, FileVideo } from 'lucide-react-native';
+import DraggableItem from './DraggableItem';
 import type { DeskFileData } from './DeskScene';
 
 interface DeskFileProps {
@@ -13,27 +14,9 @@ export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(file.name);
 
-  const pan = new Animated.ValueXY({ x: file.x, y: file.y });
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({
-        x: (pan.x as any).__getValue(),
-        y: (pan.y as any).__getValue(),
-      });
-    },
-    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-      useNativeDriver: false,
-    }),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
-      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
-      onUpdate(file.id, { x: newX, y: newY });
-    },
-  });
+  const handlePositionChange = (x: number, y: number) => {
+    onUpdate(file.id, { x, y });
+  };
 
   const getFileIcon = () => {
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -64,19 +47,17 @@ export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.fileContainer,
-          {
-            transform: pan.getTranslateTransform(),
-            zIndex: file.zIndex,
-          },
-        ]}
-        {...panResponder.panHandlers}
+      <DraggableItem
+        x={file.x}
+        y={file.y}
+        zIndex={file.zIndex}
+        onPositionChange={handlePositionChange}
+        bounds={{ minX: 0, maxX: 350, minY: 50, maxY: 650 }}
       >
         <TouchableOpacity
           style={styles.file}
           onPress={() => setIsEditing(true)}
+          activeOpacity={0.8}
         >
           <View style={styles.fileIcon}>
             {getFileIcon()}
@@ -85,7 +66,7 @@ export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
             {file.name}
           </Text>
         </TouchableOpacity>
-      </Animated.View>
+      </DraggableItem>
 
       <Modal
         visible={isEditing}
@@ -133,22 +114,17 @@ export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
 }
 
 const styles = StyleSheet.create({
-  fileContainer: {
-    position: 'absolute',
+  file: {
     width: 70,
     height: 85,
-  },
-  file: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 2, height: 4 },
+    shadowRadius: 6,
     elevation: 4,
     borderWidth: 1,
     borderColor: '#E0E0E0',
