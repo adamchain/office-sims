@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform, Alert } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -402,24 +402,103 @@ export default function DeskScene() {
     setSelectedFolder(folder);
   };
 
+  // Enhanced drop handlers for all targets
   const handleFileDrop = (file: DeskFileData, target: string) => {
-    if (target === 'filetray') {
-      // Show folder selection modal
-      setDraggedItem({ type: 'file', data: file });
-      setShowFolderSelection(true);
+    switch (target) {
+      case 'filetray':
+        setDraggedItem({ type: 'file', data: file });
+        setShowFolderSelection(true);
+        break;
+      case 'filedrawer':
+        // Move file to long-term storage
+        const fileData: FileData = {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          date: file.date,
+        };
+        setLongTermFiles(prev => [fileData, ...prev]);
+        deleteDeskFile(file.id);
+        Alert.alert('File Moved', `${file.name} has been moved to long-term storage.`);
+        break;
+      case 'recyclebin':
+        deleteDeskFile(file.id);
+        Alert.alert('File Deleted', `${file.name} has been moved to the recycle bin.`);
+        break;
     }
   };
 
   const handleFolderDrop = (folder: DeskFolderData, target: string) => {
-    if (target === 'filetray') {
-      // Add folder to file tray
-      setFileTray(prev => ({
-        ...prev,
-        folders: [...prev.folders, folder],
-      }));
+    switch (target) {
+      case 'filetray':
+        // Add folder to file tray
+        setFileTray(prev => ({
+          ...prev,
+          folders: [...prev.folders, folder],
+        }));
+        setDeskFolders(prev => prev.filter(f => f.id !== folder.id));
+        Alert.alert('Folder Moved', `${folder.name} has been moved to the file tray.`);
+        break;
+      case 'filedrawer':
+        // Move all files in folder to long-term storage
+        setLongTermFiles(prev => [...folder.files, ...prev]);
+        deleteDeskFolder(folder.id);
+        Alert.alert('Folder Archived', `${folder.name} and its contents have been moved to long-term storage.`);
+        break;
+      case 'recyclebin':
+        deleteDeskFolder(folder.id);
+        Alert.alert('Folder Deleted', `${folder.name} has been moved to the recycle bin.`);
+        break;
+    }
+  };
 
-      // Remove folder from desk
-      setDeskFolders(prev => prev.filter(f => f.id !== folder.id));
+  const handleStickyNoteDrop = (note: StickyNoteData, target: string) => {
+    switch (target) {
+      case 'filetray':
+        setDraggedItem({ type: 'stickyNote', data: note });
+        setShowFolderSelection(true);
+        break;
+      case 'filedrawer':
+        // Convert sticky note to file and move to long-term storage
+        const noteFile: FileData = {
+          name: `Note: ${note.text.substring(0, 20)}${note.text.length > 20 ? '...' : ''}`,
+          type: 'Sticky Note',
+          size: '1 KB',
+          date: 'Today',
+        };
+        setLongTermFiles(prev => [noteFile, ...prev]);
+        deleteStickyNote(note.id);
+        Alert.alert('Note Archived', 'Your sticky note has been converted to a file and moved to long-term storage.');
+        break;
+      case 'recyclebin':
+        deleteStickyNote(note.id);
+        Alert.alert('Note Deleted', 'Your sticky note has been moved to the recycle bin.');
+        break;
+    }
+  };
+
+  const handleTornPageDrop = (page: TornPageData, target: string) => {
+    switch (target) {
+      case 'filetray':
+        setDraggedItem({ type: 'tornPage', data: page });
+        setShowFolderSelection(true);
+        break;
+      case 'filedrawer':
+        // Convert torn page to file and move to long-term storage
+        const pageFile: FileData = {
+          name: `Page: ${page.text.substring(0, 20)}${page.text.length > 20 ? '...' : ''}`,
+          type: 'Text Document',
+          size: '1 KB',
+          date: 'Today',
+        };
+        setLongTermFiles(prev => [pageFile, ...prev]);
+        deleteTornPage(page.id);
+        Alert.alert('Page Archived', 'Your torn page has been converted to a file and moved to long-term storage.');
+        break;
+      case 'recyclebin':
+        deleteTornPage(page.id);
+        Alert.alert('Page Deleted', 'Your torn page has been moved to the recycle bin.');
+        break;
     }
   };
 
@@ -514,20 +593,6 @@ export default function DeskScene() {
     }
   };
 
-  const handleStickyNoteDrop = (note: StickyNoteData, target: string) => {
-    if (target === 'filetray') {
-      setDraggedItem({ type: 'stickyNote', data: note });
-      setShowFolderSelection(true);
-    }
-  };
-
-  const handleTornPageDrop = (page: TornPageData, target: string) => {
-    if (target === 'filetray') {
-      setDraggedItem({ type: 'tornPage', data: page });
-      setShowFolderSelection(true);
-    }
-  };
-
   const handleFileImported = (file: FileData) => {
     setFileTray(prev => ({
       ...prev,
@@ -581,10 +646,10 @@ export default function DeskScene() {
 
   // Calculate bounds for draggable items to cover the entire desk
   const dragBounds = {
-    minX: 0,
-    maxX: deskWidth - 100, // Leave some margin for item width
-    minY: 0,
-    maxY: deskHeight - 100, // Leave some margin for item height
+    minX: -50,
+    maxX: deskWidth - 50,
+    minY: -50,
+    maxY: deskHeight - 50,
   };
 
   // Show loading state while desk layout is being loaded

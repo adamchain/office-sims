@@ -61,19 +61,49 @@ export default function DraggableItem({
   }, [x, y]);
 
   const checkDropTarget = (x: number, y: number) => {
-    // Check if dropped on file tray (approximate position)
-    const fileTrayX = screenWidth - 160;
-    const fileTrayY = 220;
-    const fileTrayWidth = 120;
-    const fileTrayHeight = 90;
+    // File Tray (top right area)
+    const fileTrayX = screenWidth - 180;
+    const fileTrayY = 200;
+    const fileTrayWidth = 140;
+    const fileTrayHeight = 110;
 
     if (
-      x >= fileTrayX - 20 &&
-      x <= fileTrayX + fileTrayWidth + 20 &&
-      y >= fileTrayY - 20 &&
-      y <= fileTrayY + fileTrayHeight + 20
+      x >= fileTrayX - 30 &&
+      x <= fileTrayX + fileTrayWidth + 30 &&
+      y >= fileTrayY - 30 &&
+      y <= fileTrayY + fileTrayHeight + 30
     ) {
       return 'filetray';
+    }
+
+    // File Drawer (bottom left area)
+    const fileDrawerX = 20;
+    const fileDrawerY = screenHeight - 100;
+    const fileDrawerWidth = 200;
+    const fileDrawerHeight = 60;
+
+    if (
+      x >= fileDrawerX - 30 &&
+      x <= fileDrawerX + fileDrawerWidth + 30 &&
+      y >= fileDrawerY - 30 &&
+      y <= fileDrawerY + fileDrawerHeight + 30
+    ) {
+      return 'filedrawer';
+    }
+
+    // Recycle Bin (bottom right area)
+    const recycleBinX = screenWidth - 100;
+    const recycleBinY = screenHeight - 120;
+    const recycleBinWidth = 80;
+    const recycleBinHeight = 100;
+
+    if (
+      x >= recycleBinX - 30 &&
+      x <= recycleBinX + recycleBinWidth + 30 &&
+      y >= recycleBinY - 30 &&
+      y <= recycleBinY + recycleBinHeight + 30
+    ) {
+      return 'recyclebin';
     }
 
     return null;
@@ -84,8 +114,8 @@ export default function DraggableItem({
     .minDistance(5) // Require minimum movement before starting drag
     .onStart(() => {
       isDragging.value = true;
-      scale.value = withSpring(1.05, { damping: 15, stiffness: 400 });
-      shadowOpacity.value = withTiming(0.4, { duration: 150 });
+      scale.value = withSpring(1.1, { damping: 15, stiffness: 400 });
+      shadowOpacity.value = withTiming(0.6, { duration: 150 });
       
       if (onDragStart) {
         runOnJS(onDragStart)();
@@ -97,12 +127,12 @@ export default function DraggableItem({
 
       // Apply bounds constraints
       const constrainedX = Math.max(
-        bounds.minX ?? 0,
-        Math.min(bounds.maxX ?? screenWidth - 100, newX)
+        bounds.minX ?? -50,
+        Math.min(bounds.maxX ?? screenWidth - 50, newX)
       );
       const constrainedY = Math.max(
-        bounds.minY ?? 50,
-        Math.min(bounds.maxY ?? screenHeight - 150, newY)
+        bounds.minY ?? -50,
+        Math.min(bounds.maxY ?? screenHeight - 100, newY)
       );
 
       translateX.value = constrainedX;
@@ -172,10 +202,10 @@ export default function DraggableItem({
       zIndex: elevation,
       shadowOpacity: shadowOpacity.value,
       shadowOffset: {
-        width: isDragging.value ? 4 : 2,
-        height: isDragging.value ? 8 : 4,
+        width: isDragging.value ? 6 : 2,
+        height: isDragging.value ? 12 : 4,
       },
-      shadowRadius: isDragging.value ? 12 : 6,
+      shadowRadius: isDragging.value ? 16 : 6,
       elevation: elevation,
     };
   });

@@ -29,11 +29,7 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
 
   const handlePress = () => {
     if (!isDragging) {
-      if (onDrop && isDropTarget) {
-        onDrop(null as any, 'filetray');
-      } else {
-        onPress();
-      }
+      onPress();
     }
   };
 
@@ -63,7 +59,6 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       bounds={bounds}
-      disabled={isDropTarget}
     >
       <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>
         <GestureDetector gesture={tapGesture}>
@@ -100,18 +95,17 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
               <View style={styles.labelContainer}>
                 <Text style={styles.trayLabel}>INBOX</Text>
                 <Text style={styles.fileCount}>
-                  {fileTray.files.length} files
+                  {fileTray.files.length + fileTray.folders.length} items
                 </Text>
               </View>
             </View>
           </View>
         </GestureDetector>
 
-        {isDropTarget && (
-          <View style={styles.dropOverlay}>
-            <Text style={styles.dropText}>Drop file here</Text>
-          </View>
-        )}
+        {/* Drop zone indicator */}
+        <View style={styles.dropZone}>
+          <Text style={styles.dropZoneText}>Drop files here</Text>
+        </View>
       </View>
     </DraggableItem>
   );
@@ -127,7 +121,6 @@ const styles = StyleSheet.create({
   },
   tray: {
     flex: 1,
-   
     elevation: 6,
   },
   hoveredTray: {
@@ -212,21 +205,22 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '600',
   },
-  dropOverlay: {
+  dropZone: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 122, 255, 0.2)',
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 2,
     borderColor: '#007AFF',
     borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0,
   },
-  dropText: {
+  dropZoneText: {
     color: '#007AFF',
     fontSize: 10,
     fontWeight: 'bold',
