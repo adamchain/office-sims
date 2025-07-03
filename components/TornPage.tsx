@@ -9,6 +9,7 @@ interface TornPageProps {
   page: TornPageData;
   onUpdate: (id: string, updates: Partial<TornPageData>) => void;
   onDelete: (id: string) => void;
+  onDrop?: (page: TornPageData, target: string) => void;
   bounds?: {
     minX?: number;
     maxX?: number;
@@ -17,7 +18,7 @@ interface TornPageProps {
   };
 }
 
-export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageProps) {
+export default function TornPage({ page, onUpdate, onDelete, onDrop, bounds }: TornPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(page.text);
   const [isDragging, setIsDragging] = useState(false);
@@ -64,6 +65,7 @@ export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageP
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         bounds={bounds}
+        onDrop={(target) => onDrop?.(page, target)}
       >
         <GestureDetector gesture={tapGesture}>
           <View style={styles.page}>

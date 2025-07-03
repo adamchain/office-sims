@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
-import { X, FileText, File, Upload, FolderOpen } from 'lucide-react-native';
+import { X, FileText, File, Upload, FolderOpen, Folder } from 'lucide-react-native';
 import FileImportButton from './FileImportButton';
 import FileViewer from './FileViewer';
-import type { FileData } from './DeskScene';
+import type { FileData, DeskFolderData } from './DeskScene';
 
 interface FileModalProps {
   visible: boolean;
   title: string;
   files: FileData[];
+  folders?: DeskFolderData[];
   onClose: () => void;
   onFileImported?: (file: FileData) => void;
   allowImport?: boolean;
@@ -19,12 +20,14 @@ export default function FileModal({
   visible, 
   title, 
   files, 
+  folders = [],
   onClose, 
   onFileImported, 
   allowImport = false,
   drawerIndex 
 }: FileModalProps) {
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<DeskFolderData | null>(null);
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
@@ -43,6 +46,10 @@ export default function FileModal({
     setSelectedFile(file);
   };
 
+  const handleFolderPress = (folder: DeskFolderData) => {
+    setSelectedFolder(folder);
+  };
+
   const handleFileImported = (file: FileData) => {
     if (onFileImported) {
       onFileImported(file);
@@ -51,11 +58,16 @@ export default function FileModal({
 
   const handleClose = () => {
     setSelectedFile(null);
+    setSelectedFolder(null);
     onClose();
   };
 
   const handleFileViewerClose = () => {
     setSelectedFile(null);
+  };
+
+  const handleFolderModalClose = () => {
+    setSelectedFolder(null);
   };
 
   const getDrawerColor = (index?: number) => {
@@ -67,6 +79,8 @@ export default function FileModal({
     const labels = ['A', 'B', 'C', 'D', 'E'];
     return index !== undefined ? labels[index] : '';
   };
+
+  const hasContent = files.length > 0 || folders.length > 0;
 
   return (
     <>
@@ -101,8 +115,8 @@ export default function FileModal({
               </View>
             )}
 
-            <ScrollView style={styles.fileList} showsVerticalScrollIndicator={false}>
-              {files.length === 0 ? (
+            <ScrollView style={styles.contentList} showsVerticalScrollIndicator={false}>
+              {!hasContent ? (
                 <View style={styles.emptyState}>
                   {drawerIndex !== undefined ? (
                     <FolderOpen size={48} color="#CCC" />
@@ -110,7 +124,7 @@ export default function FileModal({
                     <Upload size={48} color="#CCC" />
                   )}
                   <Text style={styles.emptyText}>
-                    {drawerIndex !== undefined ? `Drawer ${getDrawerLabel(drawerIndex)} is empty` : 'No files yet'}
+                    {drawerIndex !== undefined ? `Drawer ${getDrawerLabel(drawerIndex)} is empty` : 'No items yet'}
                   </Text>
                   {allowImport && (
                     <Text style={styles.emptySubtext}>
@@ -122,31 +136,111 @@ export default function FileModal({
                   )}
                 </View>
               ) : (
-                files.map((file, index) => (
-                  <TouchableOpacity
-                    key={`${file.name}-${index}`}
-                    style={styles.fileItem}
-                    onPress={() => handleFilePress(file)}
-                  >
-                    {getFileIcon(file.name)}
-                    <View style={styles.fileInfo}>
-                      <Text style={styles.fileName}>{file.name}</Text>
-                      <Text style={styles.fileDetails}>{file.type} • {file.size}</Text>
-                      <Text style={styles.fileDate}>{file.date}</Text>
+                <>
+                  {/* Folders Section */}
+                  {folders.length > 0 && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Folders</Text>
+                      {folders.map((folder, index) => (
+                        <TouchableOpacity
+                          key={`folder-${folder.id}-${index}`}
+                          style={styles.folderItem}
+                          onPress={() => handleFolderPress(folder)}
+                        >
+                          <Folder size={24} color="#8B4513" />
+                          <View style={styles.itemInfo}>
+                            <Text style={styles.itemName}>{folder.name}</Text>
+                            <Text style={styles.itemDetails}>
+                              {folder.files.length} files
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                  </TouchableOpacity>
-                ))
+                  )}
+
+                  {/* Files Section */}
+                  {files.length > 0 && (
+                    <View style={styles.section}>
+                      {folders.length > 0 && <Text style={styles.sectionTitle}>Files</Text>}
+                      {files.map((file, index) => (
+                        <TouchableOpacity
+                          key={`file-${file.name}-${index}`}
+                          style={styles.fileItem}
+                          onPress={() => handleFilePress(file)}
+                        >
+                          {getFileIcon(file.name)}
+                          <View style={styles.itemInfo}>
+                            <Text style={styles.itemName}>{file.name}</Text>
+                            <Text style={styles.itemDetails}>{file.type} • {file.size}</Text>
+                            <Text style={styles.itemDate}>{file.date}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </>
               )}
             </ScrollView>
           </View>
         </View>
       </Modal>
 
+      {/* File Viewer Modal */}
       <FileViewer
         visible={!!selectedFile}
         file={selectedFile}
         onClose={handleFileViewerClose}
       />
+
+      {/* Nested Folder Modal */}
+      {selectedFolder && (
+        <Modal
+          visible={!!selectedFolder}
+          animationType="slide"
+          transparent
+          onRequestClose={handleFolderModalClose}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={handleFolderModalClose} style={styles.closeButton}>
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>{selectedFolder.name}</Text>
+                <View style={{ width: 24 }} />
+              </View>
+
+              <ScrollView style={styles.contentList} showsVerticalScrollIndicator={false}>
+                {selectedFolder.files.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <FolderOpen size={48} color="#CCC" />
+                    <Text style={styles.emptyText}>Folder is empty</Text>
+                    <Text style={styles.emptySubtext}>
+                      Drag files into this folder to organize them
+                    </Text>
+                  </View>
+                ) : (
+                  selectedFolder.files.map((file, index) => (
+                    <TouchableOpacity
+                      key={`nested-file-${file.name}-${index}`}
+                      style={styles.fileItem}
+                      onPress={() => handleFilePress(file)}
+                    >
+                      {getFileIcon(file.name)}
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{file.name}</Text>
+                        <Text style={styles.itemDetails}>{file.type} • {file.size}</Text>
+                        <Text style={styles.itemDate}>{file.date}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
     </>
   );
 }
@@ -213,9 +307,19 @@ const styles = StyleSheet.create({
   importButton: {
     width: '100%',
   },
-  fileList: {
+  contentList: {
     flex: 1,
     padding: 20,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+    paddingLeft: 4,
   },
   emptyState: {
     alignItems: 'center',
@@ -245,22 +349,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
   },
-  fileInfo: {
+  folderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFF8E1',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  itemInfo: {
     marginLeft: 15,
     flex: 1,
   },
-  fileName: {
+  itemName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
   },
-  fileDetails: {
+  itemDetails: {
     fontSize: 14,
     color: '#666',
     marginBottom: 2,
   },
-  fileDate: {
+  itemDate: {
     fontSize: 12,
     color: '#999',
   },

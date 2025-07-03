@@ -13,6 +13,7 @@ import DeskFile from './DeskFile';
 import DeskFolder from './DeskFolder';
 import AddItemModal from './AddItemModal';
 import RecycleBinModal, { DeletedItem } from './RecycleBinModal';
+import FolderSelectionModal from './FolderSelectionModal';
 import TornPage from './TornPage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -71,6 +72,7 @@ export interface FileTrayData {
   y: number;
   zIndex: number;
   files: FileData[];
+  folders: DeskFolderData[];
 }
 
 export default function DeskScene() {
@@ -89,11 +91,21 @@ export default function DeskScene() {
 
   const [deskFolders, setDeskFolders] = useState<DeskFolderData[]>([
     {
-      id: '1',
-      name: 'Project Alpha',
+      id: 'general',
+      name: 'General',
       x: 240,
       y: 120,
       zIndex: 6,
+      files: [
+        { name: 'Welcome.txt', type: 'Text Document', size: '1 KB', date: 'Today' },
+      ]
+    },
+    {
+      id: '1',
+      name: 'Project Alpha',
+      x: 340,
+      y: 120,
+      zIndex: 7,
       files: [
         { name: 'Proposal.pdf', type: 'PDF Document', size: '1.2 MB', date: 'Today' },
         { name: 'Budget.xlsx', type: 'Excel File', size: '234 KB', date: 'Yesterday' },
@@ -108,7 +120,7 @@ export default function DeskScene() {
     x: 30,
     y: 40,
     zIndex: 100,
-    notes: 'Welcome to your desk!\n\nTap items to interact:\n• Yellow notepad for daily notes\n• Sticky notes for quick reminders\n• Manila folder for quick access files\n• File drawer for long-term storage\n• Pen to add new sticky notes\n• Recycle bin to restore deleted items'
+    notes: 'Welcome to your desk!\n\nTap items to interact:\n• Yellow notepad for daily notes\n• Sticky notes for quick reminders\n• Manila folder for quick access files\n• File drawer for long-term storage\n• Pen to add new sticky notes\n• Recycle bin to restore deleted items\n• Drag folders into file tray to organize files'
   });
 
   const [fileTray, setFileTray] = useState<FileTrayData>({
@@ -119,7 +131,8 @@ export default function DeskScene() {
     files: [
       { name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' },
       { name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' },
-    ]
+    ],
+    folders: []
   });
 
   const [longTermFiles, setLongTermFiles] = useState<FileData[]>([
@@ -136,9 +149,11 @@ export default function DeskScene() {
   const [showFileDrawer, setShowFileDrawer] = useState(false);
   const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showFolderSelection, setShowFolderSelection] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<DeskFolderData | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [maxZIndex, setMaxZIndex] = useState(200);
+  const [draggedItem, setDraggedItem] = useState<{ type: string; data: any } | null>(null);
 
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
@@ -310,6 +325,28 @@ export default function DeskScene() {
 
   const handleFileDrop = (file: DeskFileData, target: string) => {
     if (target === 'filetray') {
+      // Show folder selection modal
+      setDraggedItem({ type: 'file', data: file });
+      setShowFolderSelection(true);
+    }
+  };
+
+  const handleFolderDrop = (folder: DeskFolderData, target: string) => {
+    if (target === 'filetray') {
+      // Add folder to file tray
+      setFileTray(prev => ({
+        ...prev,
+        folders: [...prev.folders, folder],
+      }));
+
+      // Remove folder from desk
+      setDeskFolders(prev => prev.filter(f => f.id !== folder.id));
+    }
+  };
+
+  const handleFolderSelection = (folderId: string) => {
+    if (draggedItem && draggedItem.type === 'file') {
+      const file = draggedItem.data;
       const fileData: FileData = {
         name: file.name,
         type: file.type,
@@ -317,12 +354,98 @@ export default function DeskScene() {
         date: file.date,
       };
 
+      // Add file to selected folder in file tray
       setFileTray(prev => ({
         ...prev,
-        files: [...prev.files, fileData],
+        folders: prev.folders.map(folder =>
+          folder.id === folderId
+            ? { ...folder, files: [...folder.files, fileData] }
+            : folder
+        ),
       }));
 
+      // Remove file from desk
       deleteDeskFile(file.id);
+    } else if (draggedItem && draggedItem.type === 'stickyNote') {
+      const note = draggedItem.data;
+      const fileData: FileData = {
+        name: `Note: ${note.text.substring(0, 20)}${note.text.length > 20 ? '...' : ''}`,
+        type: 'Sticky Note',
+        size: '1 KB',
+        date: 'Today',
+      };
+
+      // Add sticky note as file to selected folder in file tray
+      setFileTray(prev => ({
+        ...prev,
+        folders: prev.folders.map(folder =>
+          folder.id === folderId
+            ? { ...folder, files: [...folder.files, fileData] }
+            : folder
+        ),
+      }));
+
+      // Remove sticky note from desk
+      deleteStickyNote(note.id);
+    } else if (draggedItem && draggedItem.type === 'tornPage') {
+      const page = draggedItem.data;
+      const fileData: FileData = {
+        name: `Page: ${page.text.substring(0, 20)}${page.text.length > 20 ? '...' : ''}`,
+        type: 'Text Document',
+        size: '1 KB',
+        date: 'Today',
+      };
+
+      // Add torn page as file to selected folder in file tray
+      setFileTray(prev => ({
+        ...prev,
+        folders: prev.folders.map(folder =>
+          folder.id === folderId
+            ? { ...folder, files: [...folder.files, fileData] }
+            : folder
+        ),
+      }));
+
+      // Remove torn page from desk
+      deleteTornPage(page.id);
+    }
+
+    setDraggedItem(null);
+    setShowFolderSelection(false);
+  };
+
+  const handleCreateFolderInTray = (name: string) => {
+    const newFolder: DeskFolderData = {
+      id: Date.now().toString(),
+      name,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+      files: [],
+    };
+
+    setFileTray(prev => ({
+      ...prev,
+      folders: [...prev.folders, newFolder],
+    }));
+
+    // If we have a dragged item, add it to the new folder
+    if (draggedItem) {
+      handleFolderSelection(newFolder.id);
+    }
+  };
+
+  const handleStickyNoteDrop = (note: StickyNoteData, target: string) => {
+    if (target === 'filetray') {
+      setDraggedItem({ type: 'stickyNote', data: note });
+      setShowFolderSelection(true);
+    }
+  };
+
+  const handleTornPageDrop = (page: TornPageData, target: string) => {
+    if (target === 'filetray') {
+      setDraggedItem({ type: 'tornPage', data: page });
+      setShowFolderSelection(true);
     }
   };
 
@@ -431,6 +554,7 @@ export default function DeskScene() {
               note={note}
               onUpdate={updateStickyNote}
               onDelete={deleteStickyNote}
+              onDrop={handleStickyNoteDrop}
               bounds={dragBounds}
             />
           ))}
@@ -441,6 +565,7 @@ export default function DeskScene() {
               file={file}
               onUpdate={updateDeskFile}
               onDelete={deleteDeskFile}
+              onDrop={handleFileDrop}
               bounds={dragBounds}
             />
           ))}
@@ -452,6 +577,7 @@ export default function DeskScene() {
               onUpdate={updateDeskFolder}
               onDelete={deleteDeskFolder}
               onPress={handleFolderPress}
+              onDrop={handleFolderDrop}
               bounds={dragBounds}
             />
           ))}
@@ -462,6 +588,7 @@ export default function DeskScene() {
               page={page}
               onUpdate={updateTornPage}
               onDelete={deleteTornPage}
+              onDrop={handleTornPageDrop}
               bounds={dragBounds}
             />
           ))}
@@ -491,6 +618,7 @@ export default function DeskScene() {
         visible={showFileTray}
         title="File Tray - Quick Access"
         files={fileTray.files}
+        folders={fileTray.folders}
         onClose={() => setShowFileTray(false)}
         onFileImported={handleFileImported}
         allowImport={true}
@@ -515,6 +643,24 @@ export default function DeskScene() {
           onClose={() => setSelectedFolder(null)}
         />
       )}
+
+      {/* Folder Selection Modal */}
+      <FolderSelectionModal
+        visible={showFolderSelection}
+        folders={fileTray.folders}
+        onClose={() => {
+          setShowFolderSelection(false);
+          setDraggedItem(null);
+        }}
+        onSelectFolder={handleFolderSelection}
+        onCreateFolder={handleCreateFolderInTray}
+        draggedItemName={
+          draggedItem?.type === 'file' ? draggedItem.data.name :
+          draggedItem?.type === 'stickyNote' ? `Note: ${draggedItem.data.text.substring(0, 20)}...` :
+          draggedItem?.type === 'tornPage' ? `Page: ${draggedItem.data.text.substring(0, 20)}...` :
+          'Item'
+        }
+      />
 
       {/* Recycle Bin Modal */}
       <RecycleBinModal

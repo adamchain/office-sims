@@ -20,6 +20,7 @@ interface DraggableItemProps {
   onPositionChange: (x: number, y: number) => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  onDrop?: (target: string) => void;
   bounds?: {
     minX?: number;
     maxX?: number;
@@ -37,6 +38,7 @@ export default function DraggableItem({
   onPositionChange,
   onDragStart,
   onDragEnd,
+  onDrop,
   bounds = {},
   disabled = false,
 }: DraggableItemProps) {
@@ -57,6 +59,25 @@ export default function DraggableItem({
       stiffness: 300,
     });
   }, [x, y]);
+
+  const checkDropTarget = (x: number, y: number) => {
+    // Check if dropped on file tray (approximate position)
+    const fileTrayX = screenWidth - 160;
+    const fileTrayY = 220;
+    const fileTrayWidth = 120;
+    const fileTrayHeight = 90;
+
+    if (
+      x >= fileTrayX - 20 &&
+      x <= fileTrayX + fileTrayWidth + 20 &&
+      y >= fileTrayY - 20 &&
+      y <= fileTrayY + fileTrayHeight + 20
+    ) {
+      return 'filetray';
+    }
+
+    return null;
+  };
 
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
@@ -96,17 +117,24 @@ export default function DraggableItem({
       const finalX = translateX.value;
       const finalY = translateY.value;
 
-      translateX.value = withSpring(finalX, {
-        damping: 20,
-        stiffness: 300,
-      });
-      translateY.value = withSpring(finalY, {
-        damping: 20,
-        stiffness: 300,
-      });
+      // Check for drop targets
+      const dropTarget = checkDropTarget(finalX, finalY);
+      
+      if (dropTarget && onDrop) {
+        runOnJS(onDrop)(dropTarget);
+      } else {
+        translateX.value = withSpring(finalX, {
+          damping: 20,
+          stiffness: 300,
+        });
+        translateY.value = withSpring(finalY, {
+          damping: 20,
+          stiffness: 300,
+        });
 
-      if (onPositionChange) {
-        runOnJS(onPositionChange)(finalX, finalY);
+        if (onPositionChange) {
+          runOnJS(onPositionChange)(finalX, finalY);
+        }
       }
 
       if (onDragEnd) {

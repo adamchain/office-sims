@@ -10,6 +10,7 @@ interface DeskFolderProps {
   onUpdate: (id: string, updates: Partial<DeskFolderData>) => void;
   onDelete: (id: string) => void;
   onPress: (folder: DeskFolderData) => void;
+  onDrop?: (folder: DeskFolderData, target: string) => void;
   bounds?: {
     minX?: number;
     maxX?: number;
@@ -18,7 +19,7 @@ interface DeskFolderProps {
   };
 }
 
-export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds }: DeskFolderProps) {
+export default function DeskFolder({ folder, onUpdate, onDelete, onPress, onDrop, bounds }: DeskFolderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
   const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +82,7 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         bounds={bounds}
+        onDrop={(target) => onDrop?.(folder, target)}
       >
         <GestureDetector gesture={combinedGesture}>
           <View style={styles.folder}>

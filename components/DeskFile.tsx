@@ -9,6 +9,7 @@ interface DeskFileProps {
   file: DeskFileData;
   onUpdate: (id: string, updates: Partial<DeskFileData>) => void;
   onDelete: (id: string) => void;
+  onDrop?: (file: DeskFileData, target: string) => void;
   bounds?: {
     minX?: number;
     maxX?: number;
@@ -17,7 +18,7 @@ interface DeskFileProps {
   };
 }
 
-export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileProps) {
+export default function DeskFile({ file, onUpdate, onDelete, onDrop, bounds }: DeskFileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(file.name);
   const [isDragging, setIsDragging] = useState(false);
@@ -86,6 +87,7 @@ export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileP
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         bounds={bounds}
+        onDrop={(target) => onDrop?.(file, target)}
       >
         <GestureDetector gesture={tapGesture}>
           <View style={styles.file}>

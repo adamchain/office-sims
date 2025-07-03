@@ -9,6 +9,7 @@ interface StickyNoteProps {
   note: StickyNoteData;
   onUpdate: (id: string, updates: Partial<StickyNoteData>) => void;
   onDelete: (id: string) => void;
+  onDrop?: (note: StickyNoteData, target: string) => void;
   bounds?: {
     minX?: number;
     maxX?: number;
@@ -23,7 +24,7 @@ const colorMap = {
   low: '#4ECDC4',
 };
 
-export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyNoteProps) {
+export default function StickyNote({ note, onUpdate, onDelete, onDrop, bounds }: StickyNoteProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(note.text);
   const [editColor, setEditColor] = useState(note.color);
@@ -87,6 +88,7 @@ export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyN
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         bounds={bounds}
+        onDrop={(target) => onDrop?.(note, target)}
       >
         <GestureDetector gesture={tapGesture}>
           <View
