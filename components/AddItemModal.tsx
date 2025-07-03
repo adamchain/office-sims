@@ -61,109 +61,133 @@ export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder,
       onRequestClose={resetModal}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={resetModal}>
-              <X size={24} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {mode === 'select' ? 'Add New Item' : mode === 'file' ? 'New File' : 'New Folder'}
-            </Text>
-            <View style={{ width: 24 }} />
-          </View>
+        {/* Main content area - only shows when not in select mode */}
+        {mode !== 'select' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setMode('select')}>
+                <X size={24} color="#333" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>
+                {mode === 'file' ? 'New File' : 'New Folder'}
+              </Text>
+              <View style={{ width: 24 }} />
+            </View>
 
-          {mode === 'select' && (
-            <View style={styles.optionsContainer}>
+            {mode === 'file' && (
+              <View style={styles.formContainer}>
+                <Text style={styles.label}>File Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter file name..."
+                  placeholderTextColor="#666"
+                />
+
+                <Text style={styles.label}>File Type</Text>
+                <View style={styles.typeContainer}>
+                  {fileTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type.label}
+                      style={[
+                        styles.typeButton,
+                        fileType === type.label && styles.selectedType,
+                      ]}
+                      onPress={() => setFileType(type.label)}
+                    >
+                      <Text style={[
+                        styles.typeText,
+                        fileType === type.label && styles.selectedTypeText,
+                      ]}>
+                        {type.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.createButton, !name.trim() && styles.disabledButton]}
+                  onPress={handleAddFile}
+                  disabled={!name.trim()}
+                >
+                  <Plus size={20} color="#FFF" />
+                  <Text style={styles.createButtonText}>Create File</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {mode === 'folder' && (
+              <View style={styles.formContainer}>
+                <Text style={styles.label}>Folder Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter folder name..."
+                  placeholderTextColor="#666"
+                />
+
+                <TouchableOpacity
+                  style={[styles.createButton, !name.trim() && styles.disabledButton]}
+                  onPress={handleAddFolder}
+                  disabled={!name.trim()}
+                >
+                  <Plus size={20} color="#FFF" />
+                  <Text style={styles.createButtonText}>Create Folder</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Bottom item selector - always visible when modal is open */}
+        <View style={styles.bottomSelector}>
+          <View style={styles.selectorContainer}>
+            <Text style={styles.selectorTitle}>Add New Item</Text>
+            <View style={styles.itemsRow}>
+              {/* File Item */}
               <TouchableOpacity
-                style={styles.optionButton}
+                style={styles.itemButton}
                 onPress={() => setMode('file')}
               >
-                <FileText size={32} color="#8B4513" />
-                <Text style={styles.optionText}>Create File</Text>
+                <View style={styles.fileVisual}>
+                  <View style={styles.fileIcon}>
+                    <FileText size={24} color="#D2691E" />
+                  </View>
+                  <View style={styles.fileCorner} />
+                </View>
+                <Text style={styles.itemLabel}>File</Text>
               </TouchableOpacity>
 
+              {/* Folder Item */}
               <TouchableOpacity
-                style={styles.optionButton}
+                style={styles.itemButton}
                 onPress={() => setMode('folder')}
               >
-                <Folder size={32} color="#8B4513" />
-                <Text style={styles.optionText}>Create Folder</Text>
+                <View style={styles.folderVisual}>
+                  <View style={styles.folderTab}>
+                    <Text style={styles.folderTabText}>New</Text>
+                  </View>
+                  <View style={styles.folderBody}>
+                    <Folder size={20} color="#8B4513" />
+                  </View>
+                </View>
+                <Text style={styles.itemLabel}>Folder</Text>
               </TouchableOpacity>
 
+              {/* Sticky Note Item */}
               <TouchableOpacity
-                style={styles.optionButton}
+                style={styles.itemButton}
                 onPress={handleAddStickyNote}
               >
-                <StickyNote size={32} color="#8B4513" />
-                <Text style={styles.optionText}>Add Sticky Note</Text>
+                <View style={styles.stickyNoteVisual}>
+                  <Text style={styles.stickyNoteText}>Note</Text>
+                </View>
+                <Text style={styles.itemLabel}>Sticky Note</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          {mode === 'file' && (
-            <View style={styles.formContainer}>
-              <Text style={styles.label}>File Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter file name..."
-                placeholderTextColor="#666"
-              />
-
-              <Text style={styles.label}>File Type</Text>
-              <View style={styles.typeContainer}>
-                {fileTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type.label}
-                    style={[
-                      styles.typeButton,
-                      fileType === type.label && styles.selectedType,
-                    ]}
-                    onPress={() => setFileType(type.label)}
-                  >
-                    <Text style={[
-                      styles.typeText,
-                      fileType === type.label && styles.selectedTypeText,
-                    ]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={[styles.createButton, !name.trim() && styles.disabledButton]}
-                onPress={handleAddFile}
-                disabled={!name.trim()}
-              >
-                <Plus size={20} color="#FFF" />
-                <Text style={styles.createButtonText}>Create File</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {mode === 'folder' && (
-            <View style={styles.formContainer}>
-              <Text style={styles.label}>Folder Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter folder name..."
-                placeholderTextColor="#666"
-              />
-
-              <TouchableOpacity
-                style={[styles.createButton, !name.trim() && styles.disabledButton]}
-                onPress={handleAddFolder}
-                disabled={!name.trim()}
-              >
-                <Plus size={20} color="#FFF" />
-                <Text style={styles.createButtonText}>Create Folder</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -173,20 +197,19 @@ export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder,
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
   },
   modalContainer: {
-    width: '90%',
-    maxWidth: 400,
     backgroundColor: '#FFF',
-    borderRadius: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
+    marginBottom: 120, // Leave space for bottom selector
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 8,
   },
   modalHeader: {
@@ -199,27 +222,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 20,
-  },
-  optionButton: {
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 2,
-    borderColor: '#E9ECEF',
-    minWidth: 100,
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 8,
-    textAlign: 'center',
   },
   formContainer: {
     paddingVertical: 10,
@@ -280,6 +282,129 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: '#FFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  bottomSelector: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34, // Account for tab bar
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  selectorContainer: {
+    padding: 20,
+  },
+  selectorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  itemsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  itemButton: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  itemLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 8,
+  },
+  // File Visual
+  fileVisual: {
+    width: 50,
+    height: 60,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  fileIcon: {
+    marginBottom: 4,
+  },
+  fileCorner: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    backgroundColor: '#E0E0E0',
+    borderBottomLeftRadius: 6,
+  },
+  // Folder Visual
+  folderVisual: {
+    width: 60,
+    height: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  folderTab: {
+    width: 40,
+    height: 12,
+    backgroundColor: '#DEB887',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#CD853F',
+  },
+  folderTabText: {
+    fontSize: 6,
+    color: '#8B4513',
+    fontWeight: '600',
+  },
+  folderBody: {
+    flex: 1,
+    backgroundColor: '#F5DEB3',
+    borderRadius: 4,
+    borderTopLeftRadius: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CD853F',
+    paddingVertical: 4,
+  },
+  // Sticky Note Visual
+  stickyNoteVisual: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#FFE66D',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '3deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  stickyNoteText: {
+    fontSize: 8,
+    color: '#333',
     fontWeight: '600',
   },
 });
