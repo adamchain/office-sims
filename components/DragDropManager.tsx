@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, PanResponder, Animated } from 'react-native';
+import { View } from 'react-native';
 import type { DeskFileData } from './DeskScene';
 
 interface DragDropManagerProps {
-  children: React.ReactElement<any>; // Allow passing extra props
-  onFileDrop: (file: DeskFileData, drawerIndex: number) => void;
+  children: React.ReactElement<any>;
+  onFileDrop: (file: DeskFileData, target: string) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }
@@ -30,9 +30,9 @@ export default function DragDropManager({
     onDragEnd();
   };
 
-  const handleDrop = (drawerIndex: number) => {
-    if (draggedFile && typeof drawerIndex === 'number') {
-      onFileDrop(draggedFile, drawerIndex);
+  const handleDrop = (target: string) => {
+    if (draggedFile && target) {
+      onFileDrop(draggedFile, target);
     }
     handleDragEnd();
   };

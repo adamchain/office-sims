@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import Notepad from './Notepad';
 import StickyNote from './StickyNote';
 import FileTray from './FileTray';
 import FileCabinet from './FileCabinet';
 import FileModal from './FileModal';
-import CoffeeMug from './CoffeeMug';
 import Pen from './Pen';
 import DeskFile from './DeskFile';
 import DeskFolder from './DeskFolder';
 import AddItemModal from './AddItemModal';
 import DragDropManager from './DragDropManager';
+import TornPage from './TornPage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -47,7 +47,27 @@ export interface DeskFolderData {
   files: FileData[];
 }
 
-export interface DrawerData {
+export interface TornPageData {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  zIndex: number;
+}
+
+export interface NotepadData {
+  id: string;
+  x: number;
+  y: number;
+  zIndex: number;
+  notes: string;
+}
+
+export interface FileTrayData {
+  id: string;
+  x: number;
+  y: number;
+  zIndex: number;
   files: FileData[];
 }
 
@@ -77,14 +97,26 @@ export default function DeskScene() {
     }
   ]);
 
-  // File Tray Drawers (A-E)
-  const [fileTrayDrawers, setFileTrayDrawers] = useState<DrawerData[]>([
-    { files: [{ name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' }] }, // Drawer A
-    { files: [{ name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' }] }, // Drawer B
-    { files: [] }, // Drawer C
-    { files: [{ name: 'Contract.docx', type: 'Word Document', size: '89 KB', date: '2 days ago' }] }, // Drawer D
-    { files: [] }, // Drawer E
-  ]);
+  const [tornPages, setTornPages] = useState<TornPageData[]>([]);
+
+  const [notepad, setNotepad] = useState<NotepadData>({
+    id: 'notepad-1',
+    x: 30,
+    y: 40,
+    zIndex: 100,
+    notes: 'Welcome to your desk!\n\nTap items to interact:\n• Yellow notepad for daily notes\n• Sticky notes for quick reminders\n• Manila folder for quick access files\n• File cabinet for long-term storage\n• Pen to add new sticky notes'
+  });
+
+  const [fileTray, setFileTray] = useState<FileTrayData>({
+    id: 'filetray-1',
+    x: screenWidth - 160,
+    y: 220,
+    zIndex: 100,
+    files: [
+      { name: 'Invoice.pdf', type: 'PDF Document', size: '245 KB', date: 'Today' },
+      { name: 'PitchDeck.pptx', type: 'PowerPoint', size: '1.2 MB', date: 'Yesterday' },
+    ]
+  });
 
   const [longTermFiles, setLongTermFiles] = useState<FileData[]>([
     { name: 'Annual_Report_2023.pdf', type: 'PDF Document', size: '5.4 MB', date: 'Last week' },
@@ -98,9 +130,13 @@ export default function DeskScene() {
   const [showFileCabinet, setShowFileCabinet] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<DeskFolderData | null>(null);
-  const [selectedDrawer, setSelectedDrawer] = useState<{ index: number; files: FileData[] } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [maxZIndex, setMaxZIndex] = useState(10);
+  const [maxZIndex, setMaxZIndex] = useState(200);
+
+  // Zoom and pan state for mobile
+  const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
 
   const getNextZIndex = () => {
     setMaxZIndex(prev => prev + 1);
@@ -149,6 +185,43 @@ export default function DeskScene() {
     setDeskFolders(prev => prev.filter(folder => folder.id !== id));
   };
 
+  const updateNotepad = (updates: Partial<NotepadData>) => {
+    setNotepad(prev => ({ 
+      ...prev, 
+      ...updates, 
+      zIndex: updates.x !== undefined || updates.y !== undefined ? getNextZIndex() : prev.zIndex 
+    }));
+  };
+
+  const updateFileTray = (updates: Partial<FileTrayData>) => {
+    setFileTray(prev => ({ 
+      ...prev, 
+      ...updates, 
+      zIndex: updates.x !== undefined || updates.y !== undefined ? getNextZIndex() : prev.zIndex 
+    }));
+  };
+
+  const addTornPage = (text: string) => {
+    const newPage: TornPageData = {
+      id: Date.now().toString(),
+      text,
+      x: notepad.x + 150,
+      y: notepad.y + 50,
+      zIndex: getNextZIndex(),
+    };
+    setTornPages(prev => [...prev, newPage]);
+  };
+
+  const updateTornPage = (id: string, updates: Partial<TornPageData>) => {
+    setTornPages(prev => prev.map(page =>
+      page.id === id ? { ...page, ...updates, zIndex: updates.x !== undefined || updates.y !== undefined ? getNextZIndex() : page.zIndex } : page
+    ));
+  };
+
+  const deleteTornPage = (id: string) => {
+    setTornPages(prev => prev.filter(page => page.id !== id));
+  };
+
   const addNewFile = (name: string, type: string) => {
     const newFile: DeskFileData = {
       id: Date.now().toString(),
@@ -179,35 +252,22 @@ export default function DeskScene() {
     setSelectedFolder(folder);
   };
 
-  const handleDrawerPress = (drawerIndex: number) => {
-    const drawer = fileTrayDrawers[drawerIndex];
-    const drawerLabels = ['A', 'B', 'C', 'D', 'E'];
-    setSelectedDrawer({ 
-      index: drawerIndex, 
-      files: drawer.files 
-    });
-  };
-
-  const handleFileDrop = (file: DeskFileData, drawerIndex: number) => {
-    // Convert DeskFileData to FileData and add to drawer
-    const fileData: FileData = {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      date: file.date,
-    };
-
-    setFileTrayDrawers(prev => {
-      const newDrawers = [...prev];
-      newDrawers[drawerIndex] = {
-        ...newDrawers[drawerIndex],
-        files: [...newDrawers[drawerIndex].files, fileData],
+  const handleFileDrop = (file: DeskFileData, target: string) => {
+    if (target === 'filetray') {
+      const fileData: FileData = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        date: file.date,
       };
-      return newDrawers;
-    });
 
-    // Remove file from desk
-    deleteDeskFile(file.id);
+      setFileTray(prev => ({
+        ...prev,
+        files: [...prev.files, fileData],
+      }));
+
+      deleteDeskFile(file.id);
+    }
   };
 
   const handleDragStart = () => {
@@ -218,26 +278,15 @@ export default function DeskScene() {
     setIsDragging(false);
   };
 
-  const handleDrawerFileImported = (file: FileData, drawerIndex?: number) => {
-    if (drawerIndex !== undefined) {
-      setFileTrayDrawers(prev => {
-        const newDrawers = [...prev];
-        newDrawers[drawerIndex] = {
-          ...newDrawers[drawerIndex],
-          files: [file, ...newDrawers[drawerIndex].files],
-        };
-        return newDrawers;
-      });
-    }
+  const handleFileImported = (file: FileData) => {
+    setFileTray(prev => ({
+      ...prev,
+      files: [file, ...prev.files],
+    }));
   };
 
   const handleLongTermFileImported = (file: FileData) => {
     setLongTermFiles(prev => [file, ...prev]);
-  };
-
-  const getDrawerTitle = (drawerIndex: number) => {
-    const drawerLabels = ['A', 'B', 'C', 'D', 'E'];
-    return `Drawer ${drawerLabels[drawerIndex]}`;
   };
 
   // Sort all items by zIndex for proper rendering order
@@ -245,7 +294,13 @@ export default function DeskScene() {
     ...stickyNotes.map(note => ({ ...note, type: 'sticky' as const })),
     ...deskFiles.map(file => ({ ...file, type: 'file' as const })),
     ...deskFolders.map(folder => ({ ...folder, type: 'folder' as const })),
+    ...tornPages.map(page => ({ ...page, type: 'tornPage' as const })),
+    { ...notepad, type: 'notepad' as const },
+    { ...fileTray, type: 'fileTray' as const },
   ].sort((a, b) => a.zIndex - b.zIndex);
+
+  const deskWidth = Platform.OS === 'web' ? screenWidth - 20 : screenWidth * 1.5;
+  const deskHeight = Platform.OS === 'web' ? screenHeight * 0.9 : screenHeight * 1.2;
 
   return (
     <DragDropManager
@@ -256,44 +311,34 @@ export default function DeskScene() {
       <View style={styles.container}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            Platform.OS !== 'web' && {
+              transform: [{ scale: zoomLevel }, { translateX: panX }, { translateY: panY }],
+            }
+          ]}
           showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={Platform.OS !== 'web'}
+          horizontal={Platform.OS !== 'web'}
           bounces={false}
+          maximumZoomScale={Platform.OS !== 'web' ? 1.5 : 1}
+          minimumZoomScale={Platform.OS !== 'web' ? 0.5 : 1}
+          zoomEnabled={Platform.OS !== 'web'}
         >
           {/* Desk Surface */}
-          <View style={styles.deskSurface}>
+          <View style={[styles.deskSurface, { width: deskWidth, height: deskHeight }]}>
 
-            {/* Notepad */}
-            <View style={styles.notepadContainer}>
-              <Notepad />
-            </View>
-
-            {/* File Tray with Enhanced Drawers */}
-            <View style={styles.fileTrayContainer}>
-              <FileTray 
-                onPress={() => setShowFileTray(true)}
-                onDrawerPress={handleDrawerPress}
-                isDropTarget={isDragging}
-                onDrop={handleFileDrop}
-              />
-            </View>
-
-            {/* File Cabinet */}
+            {/* File Cabinet - Fixed position */}
             <View style={styles.cabinetContainer}>
               <FileCabinet onPress={() => setShowFileCabinet(true)} />
             </View>
 
-            {/* Coffee Mug */}
-            <View style={styles.coffeeContainer}>
-              <CoffeeMug />
-            </View>
-
-            {/* Pen */}
+            {/* Pen - Fixed position */}
             <View style={styles.penContainer}>
               <Pen onPress={addStickyNote} />
             </View>
 
-            {/* Render all items in zIndex order */}
+            {/* Render all movable items in zIndex order */}
             {allItems.map(item => {
               if (item.type === 'sticky') {
                 return (
@@ -323,6 +368,35 @@ export default function DeskScene() {
                     onPress={handleFolderPress}
                   />
                 );
+              } else if (item.type === 'tornPage') {
+                return (
+                  <TornPage
+                    key={`page-${item.id}`}
+                    page={item}
+                    onUpdate={updateTornPage}
+                    onDelete={deleteTornPage}
+                  />
+                );
+              } else if (item.type === 'notepad') {
+                return (
+                  <Notepad
+                    key={`notepad-${item.id}`}
+                    notepad={item}
+                    onUpdate={updateNotepad}
+                    onTearPage={addTornPage}
+                  />
+                );
+              } else if (item.type === 'fileTray') {
+                return (
+                  <FileTray
+                    key={`filetray-${item.id}`}
+                    fileTray={item}
+                    onUpdate={updateFileTray}
+                    onPress={() => setShowFileTray(true)}
+                    isDropTarget={isDragging}
+                    onDrop={handleFileDrop}
+                  />
+                );
               }
               return null;
             })}
@@ -339,13 +413,13 @@ export default function DeskScene() {
 
         {/* Modals */}
         
-        {/* General File Tray Modal */}
+        {/* File Tray Modal */}
         <FileModal
           visible={showFileTray}
           title="File Tray - Quick Access"
-          files={fileTrayDrawers.flatMap(drawer => drawer.files)}
+          files={fileTray.files}
           onClose={() => setShowFileTray(false)}
-          onFileImported={(file) => handleDrawerFileImported(file, 0)} // Default to drawer A
+          onFileImported={handleFileImported}
           allowImport={true}
         />
 
@@ -366,19 +440,6 @@ export default function DeskScene() {
             title={selectedFolder.name}
             files={selectedFolder.files}
             onClose={() => setSelectedFolder(null)}
-          />
-        )}
-
-        {/* Drawer Modal */}
-        {selectedDrawer && (
-          <FileModal
-            visible={!!selectedDrawer}
-            title={getDrawerTitle(selectedDrawer.index)}
-            files={selectedDrawer.files}
-            onClose={() => setSelectedDrawer(null)}
-            onFileImported={(file) => handleDrawerFileImported(file, selectedDrawer.index)}
-            allowImport={true}
-            drawerIndex={selectedDrawer.index}
           />
         )}
 
@@ -403,10 +464,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    minHeight: screenHeight,
+    flexGrow: 1,
   },
   deskSurface: {
-    flex: 1,
     backgroundColor: '#D2B48C',
     borderRadius: 20,
     margin: 10,
@@ -417,37 +477,18 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
     position: 'relative',
-    minHeight: screenHeight * 0.9,
-  },
-  notepadContainer: {
-    position: 'absolute',
-    top: 40,
-    left: 30,
-    zIndex: 100,
-  },
-  fileTrayContainer: {
-    position: 'absolute',
-    top: 220,
-    right: 40,
-    zIndex: 100,
   },
   cabinetContainer: {
     position: 'absolute',
     bottom: 40,
     left: 20,
-    zIndex: 100,
-  },
-  coffeeContainer: {
-    position: 'absolute',
-    top: 60,
-    right: 120,
-    zIndex: 100,
+    zIndex: 300,
   },
   penContainer: {
     position: 'absolute',
     top: 180,
     left: 180,
-    zIndex: 100,
+    zIndex: 300,
   },
   addButton: {
     position: 'absolute',

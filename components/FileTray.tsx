@@ -1,201 +1,143 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { Inbox, FolderOpen } from 'lucide-react-native';
-
+import { View, StyleSheet, TouchableOpacity, Text, PanResponder, Animated } from 'react-native';
+import { Inbox } from 'lucide-react-native';
+import type { FileTrayData } from './DeskScene';
 
 interface FileTrayProps {
+  fileTray: FileTrayData;
+  onUpdate: (updates: Partial<FileTrayData>) => void;
   onPress: () => void;
-  onDrawerPress: (drawerIndex: number) => void;
   isDropTarget?: boolean;
-  onDrop?: (file: import('./DeskScene').DeskFileData, drawerIndex: number) => void;
+  onDrop?: (file: import('./DeskScene').DeskFileData, target: string) => void;
 }
 
-export default function FileTray({ onPress, onDrawerPress, isDropTarget = false, onDrop }: FileTrayProps) {
-  const [hoveredDrawer, setHoveredDrawer] = useState<number | null>(null);
+export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = false, onDrop }: FileTrayProps) {
+  const [hovering, setHovering] = useState(false);
 
-  const drawers = [
-    { label: 'A', color: '#FF6B6B' },
-    { label: 'B', color: '#4ECDC4' },
-    { label: 'C', color: '#45B7D1' },
-    { label: 'D', color: '#96CEB4' },
-    { label: 'E', color: '#FFEAA7' },
-  ];
+  const pan = new Animated.ValueXY({ x: fileTray.x, y: fileTray.y });
 
-  const handleDrawerPress = (index: number) => {
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      pan.setOffset({
+        x: (pan.x as any).__getValue(),
+        y: (pan.y as any).__getValue(),
+      });
+    },
+    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
+      useNativeDriver: false,
+    }),
+    onPanResponderRelease: () => {
+      pan.flattenOffset();
+      const newX = Math.max(0, Math.min(300, (pan.x as any).__getValue()));
+      const newY = Math.max(50, Math.min(600, (pan.y as any).__getValue()));
+      onUpdate({ x: newX, y: newY });
+    },
+  });
+
+  const handlePress = () => {
     if (onDrop && isDropTarget) {
-      onDrop(index);
+      onDrop(null as any, 'filetray');
     } else {
-      onDrawerPress(index);
+      onPress();
     }
   };
 
   return (
-    <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>
-      {/* Main Tray Body */}
-      <TouchableOpacity style={styles.trayMain} onPress={onPress}>
-        <View style={styles.trayBack}>
-          <View style={styles.trayDivider} />
-          <View style={styles.trayDivider} />
+    <Animated.View
+      style={[
+        styles.trayContainer,
+        {
+          transform: pan.getTranslateTransform(),
+          zIndex: fileTray.zIndex,
+        },
+        isDropTarget && styles.dropTarget,
+      ]}
+      {...panResponder.panHandlers}
+    >
+      <TouchableOpacity 
+        style={[styles.tray, hovering && styles.hoveredTray]} 
+        onPress={handlePress}
+        onPressIn={() => setHovering(true)}
+        onPressOut={() => setHovering(false)}
+      >
+        {/* Manila folder style */}
+        <View style={styles.folderTab}>
+          <Text style={styles.tabText}>INBOX</Text>
         </View>
-        <View style={styles.trayFront}>
-          <Inbox size={24} color="#8B4513" />
-          <Text style={styles.trayLabel}>File Tray</Text>
+        <View style={styles.folderBody}>
+          <Inbox size={32} color="#8B4513" />
+          <Text style={styles.fileCount}>
+            {fileTray.files.length} files
+          </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Individual Drawers */}
-      <View style={styles.drawersContainer}>
-        {drawers.map((drawer, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.drawer,
-              { backgroundColor: drawer.color },
-              hoveredDrawer === index && styles.hoveredDrawer,
-              isDropTarget && styles.dropTargetDrawer,
-            ]}
-            onPress={() => handleDrawerPress(index)}
-            onPressIn={() => setHoveredDrawer(index)}
-            onPressOut={() => setHoveredDrawer(null)}
-          >
-            <View style={styles.drawerHandle} />
-            <Text style={styles.drawerLabel}>{drawer.label}</Text>
-            <FolderOpen size={12} color="#333" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Tray Base */}
-      <View style={styles.trayBase} />
-
       {isDropTarget && (
         <View style={styles.dropOverlay}>
-          <Text style={styles.dropText}>Drop file into a drawer</Text>
+          <Text style={styles.dropText}>Drop file here</Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   trayContainer: {
+    position: 'absolute',
     width: 120,
-    height: 140,
-    position: 'relative',
+    height: 90,
   },
   dropTarget: {
     transform: [{ scale: 1.1 }],
   },
-  trayMain: {
-    width: 100,
-    height: 70,
-    position: 'relative',
-    alignSelf: 'center',
-  },
-  trayBack: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    height: 50,
-    backgroundColor: '#A0522D',
-    borderRadius: 8,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+  tray: {
+    flex: 1,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
-    justifyContent: 'space-around',
-    paddingVertical: 8,
   },
-  trayDivider: {
-    height: 2,
-    backgroundColor: '#8B4513',
-    marginHorizontal: 8,
-    borderRadius: 1,
+  hoveredTray: {
+    transform: [{ scale: 1.05 }],
   },
-  trayFront: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 55,
+  folderTab: {
+    width: 80,
+    height: 20,
     backgroundColor: '#DEB887',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#CD853F',
+    paddingHorizontal: 8,
+  },
+  tabText: {
+    fontSize: 8,
+    color: '#8B4513',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  folderBody: {
+    flex: 1,
+    backgroundColor: '#F5DEB3',
     borderRadius: 8,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    borderTopLeftRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#CD853F',
+    paddingVertical: 8,
   },
-  trayLabel: {
+  fileCount: {
     fontSize: 8,
     color: '#8B4513',
+    marginTop: 4,
     fontWeight: '600',
-    marginTop: 2,
-  },
-  drawersContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 5,
-    marginTop: 5,
-  },
-  drawer: {
-    width: 18,
-    height: 35,
-    borderRadius: 4,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-  },
-  hoveredDrawer: {
-    transform: [{ scale: 1.1 }],
-    shadowOpacity: 0.4,
-  },
-  dropTargetDrawer: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-  },
-  drawerHandle: {
-    width: 8,
-    height: 2,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 1,
-  },
-  drawerLabel: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  trayBase: {
-    position: 'absolute',
-    bottom: 0,
-    left: 15,
-    right: 15,
-    height: 8,
-    backgroundColor: '#8B4513',
-    borderRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   dropOverlay: {
     position: 'absolute',
