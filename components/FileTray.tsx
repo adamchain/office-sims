@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Inbox, FolderOpen } from 'lucide-react-native';
 
+
 interface FileTrayProps {
   onPress: () => void;
   onDrawerPress: (drawerIndex: number) => void;
   isDropTarget?: boolean;
-  onDrop?: (drawerIndex: number) => void;
+  onDrop?: (file: import('./DeskScene').DeskFileData, drawerIndex: number) => void;
 }
 
 export default function FileTray({ onPress, onDrawerPress, isDropTarget = false, onDrop }: FileTrayProps) {

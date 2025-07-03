@@ -3,17 +3,17 @@ import { View, PanResponder, Animated } from 'react-native';
 import type { DeskFileData } from './DeskScene';
 
 interface DragDropManagerProps {
-  children: React.ReactNode;
+  children: React.ReactElement<any>; // Allow passing extra props
   onFileDrop: (file: DeskFileData, drawerIndex: number) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }
 
-export default function DragDropManager({ 
-  children, 
-  onFileDrop, 
-  onDragStart, 
-  onDragEnd 
+export default function DragDropManager({
+  children,
+  onFileDrop,
+  onDragStart,
+  onDragEnd
 }: DragDropManagerProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedFile, setDraggedFile] = useState<DeskFileData | null>(null);
@@ -31,7 +31,7 @@ export default function DragDropManager({
   };
 
   const handleDrop = (drawerIndex: number) => {
-    if (draggedFile) {
+    if (draggedFile && typeof drawerIndex === 'number') {
       onFileDrop(draggedFile, drawerIndex);
     }
     handleDragEnd();
@@ -39,7 +39,7 @@ export default function DragDropManager({
 
   return (
     <View style={{ flex: 1 }}>
-      {React.cloneElement(children as React.ReactElement, {
+      {React.cloneElement(children, {
         isDragging,
         draggedFile,
         onDragStart: handleDragStart,
