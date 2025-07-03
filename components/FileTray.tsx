@@ -127,9 +127,7 @@ const styles = StyleSheet.create({
   },
   tray: {
     flex: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 4 },
-    shadowRadius: 6,
+   
     elevation: 6,
   },
   hoveredTray: {
