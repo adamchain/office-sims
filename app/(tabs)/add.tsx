@@ -5,12 +5,7 @@ import { router } from 'expo-router';
 import AddItemModal from '@/components/AddItemModal';
 
 export default function AddScreen() {
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  // Auto-open modal when tab is accessed
-  React.useEffect(() => {
-    setShowAddModal(true);
-  }, []);
+  const [showAddModal, setShowAddModal] = useState(true); // Start with modal open
 
   const handleClose = () => {
     setShowAddModal(false);

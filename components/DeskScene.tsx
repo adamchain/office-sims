@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import Notepad from './Notepad';
 import StickyNote from './StickyNote';
 import FileTray from './FileTray';
@@ -72,6 +72,8 @@ export interface FileTrayData {
 }
 
 export default function DeskScene() {
+  const pathname = usePathname();
+  
   const [stickyNotes, setStickyNotes] = useState<StickyNoteData[]>([
     { id: '1', text: 'Call client at 3pm', color: 'urgent', x: 50, y: 150, zIndex: 1 },
     { id: '2', text: 'Review proposal', color: 'normal', x: 200, y: 200, zIndex: 2 },
@@ -136,16 +138,12 @@ export default function DeskScene() {
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
 
-  // Listen for navigation events to handle add button
+  // Listen for navigation to add tab
   React.useEffect(() => {
-    const unsubscribe = router.subscribe((state) => {
-      if (state.pathname === '/add') {
-        setShowAddModal(true);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
+    if (pathname === '/add') {
+      setShowAddModal(true);
+    }
+  }, [pathname]);
 
   const getNextZIndex = () => {
     setMaxZIndex(prev => prev + 1);
@@ -293,8 +291,8 @@ export default function DeskScene() {
   const handleAddModalClose = () => {
     setShowAddModal(false);
     // Navigate back to desk if we came from the add tab
-    if (router.canGoBack()) {
-      router.back();
+    if (pathname === '/add') {
+      router.replace('/');
     }
   };
 
