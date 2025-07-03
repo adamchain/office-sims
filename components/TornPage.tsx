@@ -8,9 +8,15 @@ interface TornPageProps {
   page: TornPageData;
   onUpdate: (id: string, updates: Partial<TornPageData>) => void;
   onDelete: (id: string) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
-export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
+export default function TornPage({ page, onUpdate, onDelete, bounds }: TornPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(page.text);
 
@@ -30,7 +36,7 @@ export default function TornPage({ page, onUpdate, onDelete }: TornPageProps) {
         y={page.y}
         zIndex={page.zIndex}
         onPositionChange={handlePositionChange}
-        bounds={{ minX: 0, maxX: 300, minY: 50, maxY: 570 }}
+        bounds={bounds}
       >
         <TouchableOpacity
           style={styles.page}

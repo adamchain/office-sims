@@ -8,9 +8,15 @@ interface NotepadProps {
   notepad: NotepadData;
   onUpdate: (updates: Partial<NotepadData>) => void;
   onTearPage: (text: string) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
-export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps) {
+export default function Notepad({ notepad, onUpdate, onTearPage, bounds }: NotepadProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState(notepad.notes);
 
@@ -49,7 +55,7 @@ export default function Notepad({ notepad, onUpdate, onTearPage }: NotepadProps)
         y={notepad.y}
         zIndex={notepad.zIndex}
         onPositionChange={handlePositionChange}
-        bounds={{ minX: 0, maxX: 280, minY: 50, maxY: 550 }}
+        bounds={bounds}
       >
         <TouchableOpacity 
           style={styles.notepad} 

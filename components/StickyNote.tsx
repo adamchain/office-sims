@@ -8,6 +8,12 @@ interface StickyNoteProps {
   note: StickyNoteData;
   onUpdate: (id: string, updates: Partial<StickyNoteData>) => void;
   onDelete: (id: string) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
 const colorMap = {
@@ -16,7 +22,7 @@ const colorMap = {
   low: '#4ECDC4',
 };
 
-export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps) {
+export default function StickyNote({ note, onUpdate, onDelete, bounds }: StickyNoteProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(note.text);
   const [editColor, setEditColor] = useState(note.color);
@@ -43,7 +49,7 @@ export default function StickyNote({ note, onUpdate, onDelete }: StickyNoteProps
         y={note.y}
         zIndex={note.zIndex}
         onPositionChange={handlePositionChange}
-        bounds={{ minX: 0, maxX: 350, minY: 50, maxY: 650 }}
+        bounds={bounds}
       >
         <TouchableOpacity
           style={[styles.stickyNote, { backgroundColor: colorMap[note.color] }]}

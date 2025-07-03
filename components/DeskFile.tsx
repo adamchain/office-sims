@@ -8,9 +8,15 @@ interface DeskFileProps {
   file: DeskFileData;
   onUpdate: (id: string, updates: Partial<DeskFileData>) => void;
   onDelete: (id: string) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
-export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
+export default function DeskFile({ file, onUpdate, onDelete, bounds }: DeskFileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(file.name);
 
@@ -52,7 +58,7 @@ export default function DeskFile({ file, onUpdate, onDelete }: DeskFileProps) {
         y={file.y}
         zIndex={file.zIndex}
         onPositionChange={handlePositionChange}
-        bounds={{ minX: 0, maxX: 350, minY: 50, maxY: 650 }}
+        bounds={bounds}
       >
         <TouchableOpacity
           style={styles.file}

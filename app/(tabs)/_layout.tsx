@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, FolderOpen, Settings } from 'lucide-react-native';
+import { Chrome as Home, Plus, Settings } from 'lucide-react-native';
 
 export default function TabsLayout() {
   return (
@@ -24,11 +24,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="files"
+        name="add"
         options={{
-          title: 'Files',
+          title: 'Add',
           tabBarIcon: ({ size, color }) => (
-            <FolderOpen size={size} color={color} />
+            <Plus size={size} color={color} />
           ),
         }}
       />

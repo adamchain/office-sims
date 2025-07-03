@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput } from 'react-native';
-import { X, FileText, Folder, Plus } from 'lucide-react-native';
+import { X, FileText, Folder, Plus, StickyNote } from 'lucide-react-native';
 
 interface AddItemModalProps {
   visible: boolean;
   onClose: () => void;
   onAddFile: (name: string, type: string) => void;
   onAddFolder: (name: string) => void;
+  onAddStickyNote?: () => void;
 }
 
-export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder }: AddItemModalProps) {
+export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder, onAddStickyNote }: AddItemModalProps) {
   const [mode, setMode] = useState<'select' | 'file' | 'folder'>('select');
   const [name, setName] = useState('');
   const [fileType, setFileType] = useState('Document');
@@ -36,6 +37,13 @@ export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder 
       onAddFolder(name.trim());
       resetModal();
     }
+  };
+
+  const handleAddStickyNote = () => {
+    if (onAddStickyNote) {
+      onAddStickyNote();
+    }
+    resetModal();
   };
 
   const resetModal = () => {
@@ -80,6 +88,14 @@ export default function AddItemModal({ visible, onClose, onAddFile, onAddFolder 
               >
                 <Folder size={32} color="#8B4513" />
                 <Text style={styles.optionText}>Create Folder</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={handleAddStickyNote}
+              >
+                <StickyNote size={32} color="#8B4513" />
+                <Text style={styles.optionText}>Add Sticky Note</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -196,13 +212,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     borderWidth: 2,
     borderColor: '#E9ECEF',
-    minWidth: 120,
+    minWidth: 100,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
     marginTop: 8,
+    textAlign: 'center',
   },
   formContainer: {
     paddingVertical: 10,

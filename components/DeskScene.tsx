@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
+import { router } from 'expo-router';
 import Notepad from './Notepad';
 import StickyNote from './StickyNote';
 import FileTray from './FileTray';
@@ -135,6 +136,17 @@ export default function DeskScene() {
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
 
+  // Listen for navigation events to handle add button
+  React.useEffect(() => {
+    const unsubscribe = router.subscribe((state) => {
+      if (state.pathname === '/add') {
+        setShowAddModal(true);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   const getNextZIndex = () => {
     setMaxZIndex(prev => prev + 1);
     return maxZIndex + 1;
@@ -155,8 +167,8 @@ export default function DeskScene() {
       id: Date.now().toString(),
       text: 'New note',
       color: 'normal',
-      x: Math.random() * (screenWidth - 100),
-      y: Math.random() * (screenHeight - 200) + 100,
+      x: Math.random() * (deskWidth - 100),
+      y: Math.random() * (deskHeight - 200) + 100,
       zIndex: getNextZIndex(),
     };
     setStickyNotes(prev => [...prev, newNote]);
@@ -226,8 +238,8 @@ export default function DeskScene() {
       type,
       size: '0 KB',
       date: 'Just now',
-      x: Math.random() * (screenWidth - 120) + 60,
-      y: Math.random() * (screenHeight - 300) + 150,
+      x: Math.random() * (deskWidth - 120) + 60,
+      y: Math.random() * (deskHeight - 300) + 150,
       zIndex: getNextZIndex(),
     };
     setDeskFiles(prev => [...prev, newFile]);
@@ -237,8 +249,8 @@ export default function DeskScene() {
     const newFolder: DeskFolderData = {
       id: Date.now().toString(),
       name,
-      x: Math.random() * (screenWidth - 120) + 60,
-      y: Math.random() * (screenHeight - 300) + 150,
+      x: Math.random() * (deskWidth - 120) + 60,
+      y: Math.random() * (deskHeight - 300) + 150,
       zIndex: getNextZIndex(),
       files: [],
     };
@@ -278,8 +290,24 @@ export default function DeskScene() {
     setLongTermFiles(prev => [file, ...prev]);
   };
 
+  const handleAddModalClose = () => {
+    setShowAddModal(false);
+    // Navigate back to desk if we came from the add tab
+    if (router.canGoBack()) {
+      router.back();
+    }
+  };
+
   const deskWidth = Platform.OS === 'web' ? screenWidth - 20 : screenWidth * 1.5;
   const deskHeight = Platform.OS === 'web' ? screenHeight * 0.9 : screenHeight * 1.2;
+
+  // Calculate bounds for draggable items to cover the entire desk
+  const dragBounds = {
+    minX: 0,
+    maxX: deskWidth - 100, // Leave some margin for item width
+    minY: 0,
+    maxY: deskHeight - 100, // Leave some margin for item height
+  };
 
   return (
     <View style={styles.container}>
@@ -319,6 +347,7 @@ export default function DeskScene() {
               note={note}
               onUpdate={updateStickyNote}
               onDelete={deleteStickyNote}
+              bounds={dragBounds}
             />
           ))}
 
@@ -328,6 +357,7 @@ export default function DeskScene() {
               file={file}
               onUpdate={updateDeskFile}
               onDelete={deleteDeskFile}
+              bounds={dragBounds}
             />
           ))}
 
@@ -338,6 +368,7 @@ export default function DeskScene() {
               onUpdate={updateDeskFolder}
               onDelete={deleteDeskFolder}
               onPress={handleFolderPress}
+              bounds={dragBounds}
             />
           ))}
 
@@ -347,6 +378,7 @@ export default function DeskScene() {
               page={page}
               onUpdate={updateTornPage}
               onDelete={deleteTornPage}
+              bounds={dragBounds}
             />
           ))}
 
@@ -354,6 +386,7 @@ export default function DeskScene() {
             notepad={notepad}
             onUpdate={updateNotepad}
             onTearPage={addTornPage}
+            bounds={dragBounds}
           />
 
           <FileTray
@@ -362,15 +395,8 @@ export default function DeskScene() {
             onPress={() => setShowFileTray(true)}
             isDropTarget={isDragging}
             onDrop={handleFileDrop}
+            bounds={dragBounds}
           />
-
-          {/* Add Button */}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={24} color="#FFF" />
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -409,9 +435,10 @@ export default function DeskScene() {
       {/* Add Item Modal */}
       <AddItemModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={handleAddModalClose}
         onAddFile={addNewFile}
         onAddFolder={addNewFolder}
+        onAddStickyNote={addStickyNote}
       />
     </View>
   );
@@ -451,22 +478,5 @@ const styles = StyleSheet.create({
     top: 180,
     left: 180,
     zIndex: 300,
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#8B4513',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000,
   },
 });

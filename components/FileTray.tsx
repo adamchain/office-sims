@@ -10,9 +10,15 @@ interface FileTrayProps {
   onPress: () => void;
   isDropTarget?: boolean;
   onDrop?: (file: import('./DeskScene').DeskFileData, target: string) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
-export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = false, onDrop }: FileTrayProps) {
+export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = false, onDrop, bounds }: FileTrayProps) {
   const [hovering, setHovering] = useState(false);
 
   const handlePositionChange = (x: number, y: number) => {
@@ -33,7 +39,7 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
       y={fileTray.y}
       zIndex={fileTray.zIndex}
       onPositionChange={handlePositionChange}
-      bounds={{ minX: 0, maxX: 300, minY: 50, maxY: 650 }}
+      bounds={bounds}
       disabled={isDropTarget}
     >
       <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>

@@ -9,9 +9,15 @@ interface DeskFolderProps {
   onUpdate: (id: string, updates: Partial<DeskFolderData>) => void;
   onDelete: (id: string) => void;
   onPress: (folder: DeskFolderData) => void;
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+  };
 }
 
-export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: DeskFolderProps) {
+export default function DeskFolder({ folder, onUpdate, onDelete, onPress, bounds }: DeskFolderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
 
@@ -39,7 +45,7 @@ export default function DeskFolder({ folder, onUpdate, onDelete, onPress }: Desk
         y={folder.y}
         zIndex={folder.zIndex}
         onPositionChange={handlePositionChange}
-        bounds={{ minX: 0, maxX: 330, minY: 50, maxY: 650 }}
+        bounds={bounds}
       >
         <TouchableOpacity
           style={styles.folder}
