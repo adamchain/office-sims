@@ -68,14 +68,41 @@ export default function FileTray({ fileTray, onUpdate, onPress, isDropTarget = f
       <View style={[styles.trayContainer, isDropTarget && styles.dropTarget]}>
         <GestureDetector gesture={tapGesture}>
           <View style={[styles.tray, hovering && styles.hoveredTray]}>
-            <View style={styles.folderTab}>
-              <Text style={styles.tabText}>INBOX</Text>
-            </View>
-            <View style={styles.folderBody}>
-              <Inbox size={32} color="#8B4513" />
-              <Text style={styles.fileCount}>
-                {fileTray.files.length} files
-              </Text>
+            {/* Stackable File Tray Structure */}
+            <View style={styles.trayStack}>
+              {/* Support Frame */}
+              <View style={styles.supportFrame}>
+                <View style={styles.leftSupport} />
+                <View style={styles.rightSupport} />
+              </View>
+              
+              {/* Stacked Trays */}
+              <View style={styles.stackedTrays}>
+                {[...Array(6)].map((_, index) => (
+                  <View 
+                    key={index} 
+                    style={[
+                      styles.trayLevel,
+                      { 
+                        bottom: index * 8,
+                        zIndex: 10 - index,
+                        opacity: index === 0 ? 1 : 0.8 - (index * 0.1)
+                      }
+                    ]}
+                  >
+                    <View style={styles.trayBase} />
+                    <View style={styles.trayRim} />
+                  </View>
+                ))}
+              </View>
+              
+              {/* Label */}
+              <View style={styles.labelContainer}>
+                <Text style={styles.trayLabel}>INBOX</Text>
+                <Text style={styles.fileCount}>
+                  {fileTray.files.length} files
+                </Text>
+              </View>
             </View>
           </View>
         </GestureDetector>
@@ -108,40 +135,83 @@ const styles = StyleSheet.create({
   hoveredTray: {
     transform: [{ scale: 1.05 }],
   },
-  folderTab: {
-    width: 80,
-    height: 20,
-    backgroundColor: '#DEB887',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: '#CD853F',
+  trayStack: {
+    flex: 1,
+    position: 'relative',
+  },
+  supportFrame: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 8,
   },
-  tabText: {
+  leftSupport: {
+    width: 8,
+    height: '100%',
+    backgroundColor: '#2C2C2E',
+    borderRadius: 2,
+  },
+  rightSupport: {
+    width: 8,
+    height: '100%',
+    backgroundColor: '#2C2C2E',
+    borderRadius: 2,
+  },
+  stackedTrays: {
+    position: 'absolute',
+    top: 8,
+    left: 12,
+    right: 12,
+    bottom: 20,
+  },
+  trayLevel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 12,
+  },
+  trayBase: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#D3D3D3',
+  },
+  trayRim: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    height: 4,
+    backgroundColor: '#E8E8E8',
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D3D3D3',
+  },
+  labelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 4,
+    paddingVertical: 2,
+  },
+  trayLabel: {
     fontSize: 8,
-    color: '#8B4513',
+    color: '#333',
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  folderBody: {
-    flex: 1,
-    backgroundColor: '#F5DEB3',
-    borderRadius: 8,
-    borderTopLeftRadius: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#CD853F',
-    paddingVertical: 8,
-  },
   fileCount: {
-    fontSize: 8,
-    color: '#8B4513',
-    marginTop: 4,
+    fontSize: 7,
+    color: '#666',
     fontWeight: '600',
   },
   dropOverlay: {
