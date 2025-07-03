@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
+import { storageService } from '@/lib/storage';
 import Notepad from './Notepad';
 import StickyNote from './StickyNote';
 import FileTray from './FileTray';
@@ -77,6 +79,7 @@ export interface FileTrayData {
 
 export default function DeskScene() {
   const pathname = usePathname();
+  const { user } = useAuth();
   
   const [stickyNotes, setStickyNotes] = useState<StickyNoteData[]>([
     { id: '1', text: 'Call client at 3pm', color: 'urgent', x: 50, y: 150, zIndex: 1 },
@@ -154,9 +157,85 @@ export default function DeskScene() {
   const [isDragging, setIsDragging] = useState(false);
   const [maxZIndex, setMaxZIndex] = useState(200);
   const [draggedItem, setDraggedItem] = useState<{ type: string; data: any } | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Zoom and pan state for mobile
   const [zoomLevel, setZoomLevel] = useState(Platform.OS === 'web' ? 1 : 0.7);
+
+  // Auto-save timer
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Load user's desk layout on mount
+  useEffect(() => {
+    if (user && !isLoaded) {
+      loadDeskLayout();
+    }
+  }, [user, isLoaded]);
+
+  // Auto-save desk layout when state changes
+  useEffect(() => {
+    if (user && isLoaded) {
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Set new timeout to save after 2 seconds of inactivity
+      saveTimeoutRef.current = setTimeout(() => {
+        saveDeskLayout();
+      }, 2000);
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    stickyNotes, deskFiles, deskFolders, tornPages, notepad, 
+    fileTray, longTermFiles, deletedItems, user, isLoaded
+  ]);
+
+  const loadDeskLayout = async () => {
+    if (!user) return;
+
+    try {
+      const layout = await storageService.loadDeskLayout(user.id);
+      if (layout) {
+        setStickyNotes(layout.stickyNotes);
+        setDeskFiles(layout.deskFiles);
+        setDeskFolders(layout.deskFolders);
+        setTornPages(layout.tornPages);
+        setNotepad(layout.notepad);
+        setFileTray(layout.fileTray);
+        setLongTermFiles(layout.longTermFiles);
+        setDeletedItems(layout.deletedItems);
+      }
+    } catch (error) {
+      console.error('Error loading desk layout:', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveDeskLayout = async () => {
+    if (!user) return;
+
+    try {
+      await storageService.saveDeskLayout(user.id, {
+        stickyNotes,
+        deskFiles,
+        deskFolders,
+        tornPages,
+        notepad,
+        fileTray,
+        longTermFiles,
+        deletedItems,
+      });
+    } catch (error) {
+      console.error('Error saving desk layout:', error);
+    }
+  };
 
   // Listen for navigation to add tab
   React.useEffect(() => {
@@ -508,6 +587,17 @@ export default function DeskScene() {
     maxY: deskHeight - 100, // Leave some margin for item height
   };
 
+  // Show loading state while desk layout is being loaded
+  if (!isLoaded) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <View style={styles.loadingContent}>
+          <Text style={styles.loadingText}>Loading your desk...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -688,6 +778,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5DC',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContent: {
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#8B4513',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
